@@ -1,0 +1,137 @@
+{% load static %}<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>{{ doc.title }} · Toomuch</title>
+<style>
+  @font-face { font-family: "Fraunces"; src: url("{% static 'fonts/Fraunces-Variable.ttf' %}") format("truetype"); font-weight: 100 900; }
+  @font-face { font-family: "Manrope"; src: url("{% static 'fonts/Manrope-Variable.ttf' %}") format("truetype"); font-weight: 200 800; }
+  @page { size: A4; margin: 0; }
+  :root { --gesso:#F3EEE6; --gesso2:#EAE1D1; --areia:#D9C7A6; --oliva:#5B6640; --chocolate:#4A2E1E; --choc2:#7A6657; --mostarda:#D89E22; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: {% if for_pdf %}var(--gesso){% else %}#D9CFC0{% endif %}; font-family: Manrope, sans-serif; color: var(--chocolate); }
+  .page { position: relative; width: 210mm; height: 297mm; overflow: hidden; background: var(--gesso); page-break-after: always; {% if not for_pdf %}margin: 10mm auto; box-shadow: 0 2mm 8mm rgba(74,46,30,.18);{% endif %} }
+  .page:last-child { page-break-after: auto; }
+  .band { position: absolute; left: 0; top: 0; width: 5.3mm; height: 297mm; background: repeating-linear-gradient(90deg, var(--chocolate) 0 0.26mm, transparent 0.26mm 1.32mm); opacity: .16; }
+  .ribbed { position: absolute; height: 3.7mm; background: repeating-linear-gradient(90deg, var(--chocolate) 0 0.26mm, transparent 0.26mm 1.06mm); opacity: .22; }
+  .abs { position: absolute; }
+  .header { left: 15mm; top: 11.6mm; width: 180mm; display: flex; justify-content: space-between; align-items: center; }
+  .header img { height: 9mm; }
+  .caps { font-size: 8.25pt; letter-spacing: .18em; text-transform: uppercase; color: var(--choc2); }
+  .caps.oliva { color: var(--oliva); font-weight: 600; }
+  .pagenum { font-family: Fraunces, serif; font-weight: 600; font-size: 12pt; }
+  h1.name { margin: 0; font-family: Fraunces, serif; font-variation-settings: "SOFT" 100, "opsz" 72; font-weight: 600; font-size: 48pt; line-height: 1; color: var(--chocolate); }
+  .tagline { margin: 2mm 0 0; font-size: 10.5pt; line-height: 1.55; color: var(--choc2); }
+  .hero { left: 15mm; top: 27.5mm; width: 100.5mm; height: 139.7mm; object-fit: cover; border-radius: 1.6mm; }
+  .hero-empty { left: 15mm; top: 27.5mm; width: 100.5mm; height: 139.7mm; border: 0.3mm dashed #B9A98C; border-radius: 1.6mm; display: flex; align-items: center; justify-content: center; color: var(--choc2); font-size: 9pt; }
+  .col { left: 126mm; top: 27.5mm; width: 69.3mm; height: 139.7mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .price { font-family: Fraunces, serif; font-variation-settings: "SOFT" 100; font-weight: 600; font-size: 22pt; line-height: 1.1; }
+  .specs { left: 15mm; top: 187mm; width: 180mm; display: flex; gap: 8.5mm; }
+  .specs > div { flex: 1; }
+  .specs .v { font-size: 10.5pt; line-height: 1.5; }
+  .colors { left: 15mm; top: 229mm; width: 180mm; }
+  .sw { display: inline-block; width: 8mm; height: 8mm; border-radius: 50%; border: 0.26mm solid #C9B99B; vertical-align: middle; }
+  .swatches { display: flex; gap: 7.4mm; margin-top: 3.7mm; }
+  .swatches > div { width: 19mm; text-align: center; font-size: 8.25pt; color: var(--choc2); }
+  .footer { left: 15mm; top: 278mm; width: 180mm; display: flex; justify-content: space-between; align-items: center; font-size: 8.25pt; letter-spacing: .06em; color: var(--choc2); }
+  .footer svg { width: 10.6mm; height: 5.3mm; }
+  /* capa */
+  .cover-title { left: 15mm; top: 37mm; width: 158mm; margin: 0; font-family: Fraunces, serif; font-variation-settings: "SOFT" 100, "opsz" 72; font-weight: 600; font-size: 40pt; line-height: 1.05; }
+  .cover-sub { left: 15mm; top: 72mm; width: 124mm; margin: 0; font-size: 10.5pt; line-height: 1.6; color: var(--choc2); }
+  .cover-img { left: 15mm; top: 95.8mm; width: 180.4mm; height: 169.3mm; object-fit: cover; border-radius: 2.1mm; }
+  .cover-cap { left: 21mm; top: 255mm; font-size: 8.25pt; letter-spacing: .2em; text-transform: uppercase; color: var(--gesso); }
+  /* sumário */
+  .toc-title { left: 15mm; top: 31mm; margin: 0; font-family: Fraunces, serif; font-variation-settings: "SOFT" 100, "opsz" 72; font-weight: 600; font-size: 36pt; line-height: 1; }
+  .toc-list { left: 15mm; top: 50mm; width: 79mm; }
+  .toc-list div { display: flex; justify-content: space-between; align-items: baseline; padding: 3.2mm 0; border-bottom: 0.26mm solid var(--areia); font-size: 11pt; }
+  .toc-list span.n { font-family: Fraunces, serif; font-weight: 600; font-size: 13.5pt; }
+  .howto { left: 15mm; top: 128mm; width: 79mm; border: 0.26mm solid var(--areia); border-radius: 2.1mm; padding: 5.3mm 5.8mm; font-size: 9.75pt; line-height: 1.5; }
+  .howto div + div { margin-top: 3.2mm; }
+  .tiles { left: 104.8mm; top: 31mm; width: 90.5mm; display: flex; flex-wrap: wrap; gap: 4.2mm; }
+  .tiles > div { width: 43.1mm; }
+  .tiles img, .tiles .ph { width: 43.1mm; height: 43.1mm; object-fit: cover; border-radius: 2.1mm; display: block; }
+  .tiles .ph { border: 0.3mm dashed #B9A98C; }
+  .tiles .lbl { margin-top: 2.1mm; font-size: 9pt; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+  .quote { left: 104.8mm; top: 147mm; width: 90.5mm; margin: 0; font-family: Fraunces, serif; font-variation-settings: "SOFT" 100, "opsz" 24; font-weight: 500; font-size: 16.5pt; line-height: 1.35; }
+  .why { left: 104.8mm; top: 197mm; width: 90.5mm; font-size: 9.75pt; line-height: 1.55; }
+</style>
+</head>
+<body>
+
+{# ---------------- Capa ---------------- #}
+{% if not only_products %}
+<section class="page">
+  <div class="band"></div>
+  <div class="abs header"><img src="{% static 'img/toomuch-wordmark.png' %}" alt="Too Much"><span class="caps">{{ doc.title }}</span></div>
+  <h1 class="abs cover-title">Decoração 3D que transforma ambientes.</h1>
+  <p class="abs cover-sub">Luminárias, vasos e utilidades impressos camada por camada em Florianópolis. Design autoral, produção sob demanda e cores sob medida para o seu espaço.</p>
+  {% if doc.cover and doc.cover.thumbnail %}<img class="abs cover-img" src="{{ doc.cover.thumbnail.url }}" alt="">{% if doc.cover_product %}<div class="abs cover-cap">{{ doc.cover_product.name }}</div>{% endif %}{% else %}<div class="abs hero-empty" style="left:15mm;top:95.8mm;width:180.4mm;height:169.3mm">Foto de capa · a produzir</div>{% endif %}
+  <div class="abs footer"><span>toomuch.art · @toomuchbr.art</span>{% include "publishing/_infinity.svg" %}<span>Luminárias · Vasos · Utilidades · Sazonais</span></div>
+</section>
+
+{# ---------------- Sumário ---------------- #}
+<section class="page">
+  <div class="band"></div>
+  <div class="abs header"><img src="{% static 'img/toomuch-wordmark.png' %}" alt="Too Much"><span class="caps">{{ doc.title }}</span><span class="pagenum">02</span></div>
+  <h1 class="abs toc-title">Sumário</h1>
+  <div class="abs toc-list">
+    {% for category, number in doc.categories %}<div><span>{{ category.name }}</span><span class="n">{{ number|stringformat:"02d" }}</span></div>{% empty %}<div><span class="caps">Nenhum produto pronto para o catálogo</span></div>{% endfor %}
+  </div>
+  <div class="abs howto">
+    <div class="caps oliva">Como pedir</div>
+    <div>1. Escolha a peça e a cor da cúpula ou do corpo.</div>
+    <div>2. Chame no WhatsApp ou compre pelo site e pelos marketplaces.</div>
+    <div>3. Produção sob demanda: 3 a 5 dias úteis, depois o frete.</div>
+    <div>4. Enviamos para todo o Brasil, com tag e embalagem Toomuch.</div>
+    <div class="caps" style="margin-top:3mm">toomuch.art · @toomuchbr.art</div>
+  </div>
+  <div class="abs tiles">
+    {% for category, photo in doc.tiles %}
+    <div>
+      {% if photo and photo.thumbnail %}<img src="{{ photo.thumbnail.url }}" alt="">{% else %}<div class="ph"></div>{% endif %}
+      <div class="lbl">{{ category.name }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="abs quote">Nada de estoque parado. Nada de desperdício. Só design autoral, produção sob demanda e cuidado em cada camada.</p>
+  <div class="abs ribbed" style="left:104.8mm;top:187mm;width:90.5mm"></div>
+  <div class="abs why"><div class="caps oliva" style="margin-bottom:3mm">Por que impressão 3D</div>Peças leves e resistentes, com acabamento fosco, seda ou translúcido. Cada modelo é desenhado pela Toomuch e impresso só quando você pede, na cor que combina com o seu ambiente.</div>
+  <div class="abs footer"><span>toomuch.art · @toomuchbr.art</span>{% include "publishing/_infinity.svg" %}<span>Design autoral · produzido em Florianópolis, SC</span></div>
+</section>
+
+{% endif %}
+{# ---------------- Uma página por produto ---------------- #}
+{% for page in doc.pages %}
+<section class="page">
+  <div class="band"></div>
+  <div class="abs header"><img src="{% static 'img/toomuch-wordmark.png' %}" alt="Too Much"><span class="caps">{{ doc.title }} · {{ page.product.category.name }}</span><span class="pagenum">{{ page.page_number|stringformat:"02d" }}</span></div>
+  {% if page.photo and page.photo.thumbnail %}<img class="abs hero" src="{{ page.photo.thumbnail.url }}" alt="">{% else %}<div class="abs hero-empty">Foto · a produzir</div>{% endif %}
+  <div class="abs col">
+    <div>
+      <div class="caps oliva">{{ page.product.category.name }}{% if page.product.origin == "own" %} · design autoral{% endif %}</div>
+      <h1 class="name" style="margin-top:2.6mm">{{ page.product.name }}</h1>
+      <p class="tagline">{{ page.product.short_description }}</p>
+    </div>
+    <div>
+      <div class="caps">A partir de</div>
+      <div class="price">{% if page.price_from %}R$ {{ page.price_from }}{% else %}R$ —{% endif %}</div>
+      <div style="font-size:9pt;color:var(--choc2);margin-top:1mm">Sob demanda · {{ page.product.lead_time_days }} dias úteis + frete{% if page.price_from and not page.price_approved %} · preço sugerido, a aprovar{% endif %}</div>
+    </div>
+  </div>
+  <div class="abs ribbed" style="left:15mm;top:177mm;width:180mm"></div>
+  <div class="abs specs">
+    <div><div class="caps oliva" style="margin-bottom:2mm">Medidas</div><div class="v">{{ page.dims|default:"—" }}</div></div>
+    <div><div class="caps oliva" style="margin-bottom:2mm">Produção</div><div class="v">Impresso em 3D, camada por camada<br>Sob demanda, {{ page.product.lead_time_days }} dias úteis</div></div>
+    <div><div class="caps oliva" style="margin-bottom:2mm">Tamanhos</div><div class="v">{% for pv in page.variants %}{{ pv.variant.size }}{% if pv.price %} · R$ {{ pv.price }}{% endif %}{% if not forloop.last %}<br>{% endif %}{% endfor %}</div></div>
+  </div>
+  <div class="abs colors">
+    <div class="caps oliva">Cores</div>
+    <div class="swatches">
+      {% for pv in page.colors %}<div><span class="sw" style="background:{{ pv.color_hex|default:'#F6F4EF' }}"></span><div style="margin-top:1.5mm">{{ pv.color_name }}</div></div>{% empty %}<div style="width:auto;text-align:left">Outras cores sob consulta.</div>{% endfor %}
+    </div>
+  </div>
+  <div class="abs footer"><span>toomuch.art · @toomuchbr.art</span>{% include "publishing/_infinity.svg" %}<span>Design autoral · produzido em Florianópolis, SC</span></div>
+</section>
+{% endfor %}
+</body>
+</html>

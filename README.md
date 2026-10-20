@@ -14,11 +14,11 @@ lista de preço e calculadora rápida.
 | Inventário | `FilamentSKU` (marca, fabricante, cor oficial, custo médio ponderado, saldo), `Spool` opcional, `Purchase` (lança no estoque e recalcula o custo médio), `StockMovement` imutável |
 | Custo e preço | Motor puro em `apps/costing/engine.py` com as fórmulas da especificação; `GlobalParams` e `ChannelFee` com vigência; `PriceByChannel` com histórico, aprovação e alerta de margem mínima; **calculadora rápida** e **lista de preço** |
 | Produção | `ProductionOrder` explode em `PrintJob` por peça × quantidade; concluir baixa o filamento (consumo ou refugo) e abre reimpressão em caso de falha |
-| Publicação | `Publication` registra o que foi enviado para PDF, web, ML, Shopee ou Tiny |
+| Publicação | **Catálogo PDF** (capa, sumário e uma página A4 por produto, no modelo visual da marca, com WeasyPrint), prévia em HTML, página individual por produto; **planilhas de anúncios** para Mercado Livre e Shopee (CSV ou XLSX) com título dentro do limite, descrição estruturada, preço do canal, medidas e fotos; `Publication` registra o que foi enviado |
 | Dados iniciais | `seed_base` cria parâmetros (energia 0,95; mão de obra 30; desperdício 2 %; falha 5 %; Simples 4 %), impressoras a R$ 3.000, canais Site/ML/Shopee e cores; `seed_demo` cria a Solaris de exemplo |
 
-Ainda não existe: catálogo PDF/web gerado pelo sistema (E4/E6), importação em lote (E6), integração
-Tiny e Bambu ao vivo (E7/E8), perfis de permissão.
+Ainda não existe: página web pública do catálogo (E6), importação em lote (E6), integração Tiny e
+Bambu ao vivo (E7/E8), perfis de permissão.
 
 ## Rodar em desenvolvimento
 
@@ -78,6 +78,15 @@ e escolha a impressora para a qual foi fatiado; a leitura acontece no upload.
 5. **Preços por canal**: aprove o sugerido ou informe o vigente.
 6. **Produção**: abra uma ordem (explode em trabalhos), inicie e conclua cada trabalho — o filamento é
    baixado automaticamente.
+7. **Catálogo** (menu Catálogo): escolha o canal da lista de preço, baixe o PDF ou a planilha de anúncios.
+   Entram os produtos ativos com o checklist completo; "incluir todos" mostra também os incompletos.
+
+## Catálogo PDF
+
+O PDF usa as fontes Fraunces e Manrope empacotadas em `static/fonts/` (licença SIL OFL, arquivos `OFL-*.txt`)
+e o wordmark em `static/img/`. A geração usa o WeasyPrint, que precisa das bibliotecas Pango/Cairo no sistema
+(já presentes na imagem Docker; no Mac, `brew install pango`). As fotos vêm do `thumbnail` de cada `Asset` de
+tipo Foto (800 px), gerado no upload.
 
 ## Estrutura
 
@@ -95,8 +104,7 @@ templates/         base com a identidade visual (gesso, chocolate, Fraunces + Ma
 
 ## Próximos passos (roadmap)
 
-- E4/E6: geração do catálogo PDF e da página pública a partir do modelo desenhado; exportação CSV ML/Shopee.
-- E6: importação em lote (Thangs + pasta de fotos) com planilha de mapeamento.
+- E6: página pública do catálogo (mesmo modelo do PDF) e importação em lote (Thangs + pasta de fotos).
 - E7: Tiny ERP — envio de produtos, pedidos pagos virando ordens.
 - E8: status ao vivo das Bambu (MQTT em modo LAN) e relatórios de margem e giro.
 - Hospedagem em app.toomuch.art (VPS + Docker Compose + HTTPS) e backup diário.

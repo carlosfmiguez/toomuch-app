@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Catálogo · Sistema Toomuch{% endblock %}
+{% block content %}
+<div class="eyebrow">Catálogo e publicação</div>
+<h1>Catálogo</h1>
+<p class="muted">O PDF e as planilhas são gerados da ficha dos produtos. Entram os produtos ativos ou sazonais com o checklist completo e preço no canal escolhido; marque "incluir todos" para ver também os incompletos.</p>
+
+<form method="get" style="display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:12px 0 24px">
+  <label>Canal (lista de preço) <select name="canal">{% for c in channels %}<option value="{{ c.pk }}" {% if channel and c.pk == channel.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></label>
+  <label><span>Incluir todos</span><select name="todos"><option value="0" {% if only_ready %}selected{% endif %}>só os prontos</option><option value="1" {% if not only_ready %}selected{% endif %}>todos os ativos</option></select></label>
+  <button class="btn secondary" type="submit">Atualizar</button>
+</form>
+
+<div class="grid" style="margin-bottom:28px">
+  <div class="card"><div class="eyebrow">Páginas</div><div class="num">{{ doc.pages|length|add:2 }}</div><div class="muted">capa + sumário + {{ doc.pages|length }} produtos (de {{ products_total }} ativos)</div></div>
+  <div class="card"><div class="eyebrow">Preços</div><div class="num">{{ channel.name|default:"—" }}</div><div class="muted">lista {{ channel.get_price_list_display|default:"—" }}</div></div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:32px">
+  <a class="btn" href="{% url 'publishing:catalog_pdf' %}?canal={{ channel.pk }}&todos={% if only_ready %}0{% else %}1{% endif %}">Baixar PDF do catálogo</a>
+  <a class="btn secondary" href="{% url 'publishing:catalog_html' %}?canal={{ channel.pk }}&todos={% if only_ready %}0{% else %}1{% endif %}" target="_blank">Ver em HTML</a>
+  <a class="btn secondary" href="{% url 'publishing:catalog_pdf' %}?canal={{ channel.pk }}&registrar=1">Baixar e registrar publicação</a>
+  <a class="btn secondary" href="{% url 'publishing:export_marketplace' 'ml' %}?canal={{ channel.pk }}&formato=xlsx">Planilha Mercado Livre</a>
+  <a class="btn secondary" href="{% url 'publishing:export_marketplace' 'shopee' %}?canal={{ channel.pk }}&formato=xlsx">Planilha Shopee</a>
+</div>
+
+<h2>Produtos no catálogo</h2>
+<table>
+  <tr><th>Pág.</th><th>Produto</th><th>Categoria</th><th>Foto</th><th class="r">A partir de</th><th>Cores</th><th></th></tr>
+  {% for page in doc.pages %}
+  <tr>
+    <td>{{ page.page_number|stringformat:"02d" }}</td>
+    <td><a href="{% url 'catalog:product_detail' page.product.pk %}">{{ page.product.name }}</a></td>
+    <td>{{ page.product.category }}</td>
+    <td>{% if page.photo %}<span class="pill ok">ok</span>{% else %}<span class="pill warn">sem foto</span>{% endif %}</td>
+    <td class="r">{% if page.price_from %}R$ {{ page.price_from }}{% if not page.price_approved %} <span class="pill">sugerido</span>{% endif %}{% else %}<span class="pill warn">sem preço</span>{% endif %}</td>
+    <td>{% for pv in page.colors %}{% if pv.color_hex %}<span class="swatch" style="background:{{ pv.color_hex }}"></span>{% endif %}{{ pv.color_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+    <td><a href="{% url 'publishing:product_page_pdf' page.product.pk %}?canal={{ channel.pk }}" target="_blank">página em PDF</a></td>
+  </tr>
+  {% empty %}<tr><td colspan="7" class="muted">Nenhum produto pronto. Complete o checklist na ficha do produto (3MF, BOM, foto, licença, preço aprovado).</td></tr>{% endfor %}
+</table>
+{% endblock %}

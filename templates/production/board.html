@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Produção · Sistema Toomuch{% endblock %}
+{% block content %}
+<style>
+  .lanes{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+  .lane h2{font-size:22px;margin-bottom:4px}
+  .job{border:1px solid var(--areia);border-radius:12px;padding:14px;background:#fff8;margin-bottom:12px}
+  .job.printing{border-color:var(--mostarda);box-shadow:0 0 0 3px #F3E3B8}
+  .job .t{font-weight:700;font-size:16px}
+  .job .m{font-size:13px;color:var(--choc2);margin:4px 0 10px}
+  .actions{display:flex;flex-wrap:wrap;gap:8px}
+  .actions form{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .actions input,.actions select{min-height:44px;font-size:15px;max-width:150px}
+  .btn.big{min-height:48px;padding:12px 18px;font-size:15px}
+  .btn.danger{background:var(--vermelho)}
+  details summary{cursor:pointer;color:var(--oliva);font-weight:600;font-size:14px;padding:6px 0}
+</style>
+<div class="eyebrow">Produção</div>
+<h1>Fila por impressora</h1>
+<p class="muted">Inicie, conclua ou marque falha direto do celular. Concluir baixa o filamento (pesagem opcional); falha lança refugo e abre a reimpressão. <a href="{% url 'admin:production_productionorder_add' %}">Abrir uma ordem</a></p>
+
+<div class="lanes">
+  {% for col in columns %}
+  <section class="lane">
+    <h2>{{ col.printer.name }}</h2>
+    <div class="muted" style="margin-bottom:10px">{{ col.printer.model }} · {{ col.printing|length }} imprimindo · {{ col.queued|length }} na fila</div>
+    {% for job in col.printing %}
+    <div class="job printing">
+      <div class="t">{{ job.part.name }} #{{ job.sequence }} · {{ job.order.variant.product.name }}</div>
+      <div class="m">{{ job.order }} · {{ job.filament|default:"filamento não informado" }} · est. {{ job.est_grams|default:"?" }} g / {{ job.est_minutes|default:"?" }} min · desde {{ job.started_at|date:"H:i" }}</div>
+      <div class="actions">
+        <form method="post" action="{% url 'production:job_finish' job.pk %}">{% csrf_token %}
+          <input type="number" step="0.1" name="grams" placeholder="gramas pesadas" inputmode="decimal">
+          <input type="number" name="minutes" placeholder="min reais" inputmode="numeric">
+          <button class="btn big" type="submit">Concluir</button>
+        </form>
+        <details><summary>Falhou?</summary>
+          <form method="post" action="{% url 'production:job_fail' job.pk %}" style="margin-top:6px">{% csrf_token %}
+            <input type="text" name="reason" placeholder="motivo" required>
+            <input type="number" step="0.1" name="grams" placeholder="g perdidas" inputmode="decimal">
+            <button class="btn big danger" type="submit">Marcar falha</button>
+          </form>
+        </details>
+      </div>
+    </div>
+    {% endfor %}
+    {% for job in col.queued %}
+    <div class="job">
+      <div class="t">{{ job.part.name }} #{{ job.sequence }} · {{ job.order.variant.product.name }}</div>
+      <div class="m">{{ job.order }} · prioridade {{ job.order.priority }}{% if job.order.due_date %} · prazo {{ job.order.due_date|date:"d/m" }}{% endif %} · {{ job.filament|default:"filamento não informado" }} · est. {{ job.est_grams|default:"?" }} g / {{ job.est_minutes|default:"?" }} min{% if not job.asset %} · <span class="pill warn">sem 3MF</span>{% endif %}</div>
+      <div class="actions">
+        <form method="post" action="{% url 'production:job_start' job.pk %}">{% csrf_token %}
+          <input type="hidden" name="printer" value="{{ col.printer.pk }}">
+          <button class="btn big" type="submit">Iniciar</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+    {% if not col.printing and not col.queued %}<div class="muted">Livre.</div>{% endif %}
+  </section>
+  {% endfor %}
+
+  <section class="lane">
+    <h2>Sem impressora</h2>
+    <div class="muted" style="margin-bottom:10px">Escolha onde imprimir</div>
+    {% for job in unassigned %}
+    <div class="job">
+      <div class="t">{{ job.part.name }} #{{ job.sequence }} · {{ job.order.variant.product.name }}</div>
+      <div class="m">{{ job.order }} · {{ job.filament|default:"filamento não informado" }} · est. {{ job.est_grams|default:"?" }} g / {{ job.est_minutes|default:"?" }} min</div>
+      <div class="actions">
+        <form method="post" action="{% url 'production:job_start' job.pk %}">{% csrf_token %}
+          <select name="printer">{% for p in printers %}<option value="{{ p.pk }}">{{ p.name }}</option>{% endfor %}</select>
+          <button class="btn big" type="submit">Iniciar</button>
+        </form>
+      </div>
+    </div>
+    {% empty %}<div class="muted">Nada aguardando.</div>{% endfor %}
+  </section>
+</div>
+
+<div class="cols" style="margin-top:32px">
+  <section>
+    <h2>Pós-processamento e montagem</h2>
+    {% for order in finishing %}
+    <div class="job">
+      <div class="t">{{ order }}</div>
+      <div class="m">{{ order.get_status_display }} · {{ order.quantity }} un.{% if order.due_date %} · prazo {{ order.due_date|date:"d/m" }}{% endif %}</div>
+      <div class="actions">
+        <form method="post" action="{% url 'production:order_advance' order.pk %}">{% csrf_token %}
+          <input type="number" name="minutes" placeholder="min reais" inputmode="numeric">
+          <button class="btn big" type="submit">{% if order.status == "post" %}Pós feito → montagem{% else %}Montagem feita → pronto{% endif %}</button>
+        </form>
+      </div>
+    </div>
+    {% empty %}<div class="muted">Nada em acabamento.</div>{% endfor %}
+  </section>
+  <section>
+    <h2>Prontas recentemente</h2>
+    <table>{% for order in ready %}<tr><td>{{ order }}</td><td class="muted">{{ order.updated_at|date:"d/m H:i" }}</td></tr>{% empty %}<tr><td class="muted">—</td></tr>{% endfor %}</table>
+  </section>
+</div>
+{% endblock %}
