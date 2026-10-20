@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Calculadora rápida · Sistema Toomuch{% endblock %}
+{% block content %}
+<div class="eyebrow">Custo e preço</div>
+<h1>Calculadora rápida</h1>
+<p class="muted">Orce uma peça sem cadastrar nada. Usa os parâmetros vigentes (energia R$ {{ params.energy_tariff_kwh }}/kWh, mão de obra R$ {{ params.labor_cost_per_hour }}/h, Simples {{ params.simples_pct }}%) e as taxas atuais de cada canal.</p>
+<div class="cols">
+  <form class="stack card" method="post" hx-post="{% url 'costing:calculator' %}" hx-target="#resultado" hx-swap="innerHTML">
+    {% csrf_token %}
+    {% for field in form %}
+      <label>{{ field.label }} {{ field }}{% if field.errors %}<span class="pill warn">{{ field.errors|striptags }}</span>{% endif %}</label>
+    {% endfor %}
+    <button class="btn" type="submit">Calcular</button>
+  </form>
+  <div id="resultado">{% include "costing/_calculator_result.html" %}</div>
+</div>
+{% endblock %}

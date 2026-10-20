@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} · Sistema Toomuch{% endblock %}
+{% block content %}
+<div class="eyebrow">{{ product.category }} · {{ product.get_status_display }} · {{ product.get_origin_display }}</div>
+<h1>{{ product.name }} <span class="muted" style="font-size:20px;font-family:Manrope;font-weight:400">{{ product.sku_base }}</span></h1>
+<p class="muted">{{ product.short_description }}</p>
+<p><a class="btn secondary" href="{% url 'admin:catalog_product_change' product.pk %}">Editar no back-office</a></p>
+
+<div class="cols" style="margin-top:20px">
+  <section>
+    <h2>Pronto para o catálogo?</h2>
+    <table>
+      {% for label, ok in checklist %}<tr><td>{{ label }}</td><td>{% if ok %}<span class="pill ok">ok</span>{% else %}<span class="pill warn">falta</span>{% endif %}</td></tr>{% endfor %}
+    </table>
+    <h2 style="margin-top:24px">Medidas</h2>
+    <p>{{ product.height_mm|default:"—" }} × {{ product.width_mm|default:"—" }} × {{ product.depth_mm|default:"—" }} mm · {{ product.weight_g|default:"—" }} g · {{ product.lead_time_days }} dias úteis</p>
+    {% if product.origin != "own" %}<p class="muted">Licença: {{ product.license_author }} · {{ product.license_terms }} {% if product.license_cost_per_unit %}· R$ {{ product.license_cost_per_unit }} por unidade{% endif %}</p>{% endif %}
+  </section>
+  <section>
+    <h2>Fotos</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:10px">
+      {% for a in photos %}{% if a.thumbnail %}<img src="{{ a.thumbnail.url }}" alt="{{ a.name }}" style="width:140px;height:175px;object-fit:cover;border-radius:10px">{% endif %}{% empty %}<span class="muted">Nenhuma foto. Suba fotos pelo back-office (tipo Foto).</span>{% endfor %}
+    </div>
+  </section>
+</div>
+
+<section style="margin-top:32px">
+  <h2>Peças impressas</h2>
+  <table>
+    <tr><th>Peça</th><th>Qtd</th><th>Slot</th><th>Arquivos</th><th class="r">Gramas</th><th class="r">Tempo</th></tr>
+    {% for row in parts %}
+    <tr>
+      <td><a href="{% url 'admin:catalog_part_change' row.obj.pk %}">{{ row.obj.name }}</a></td>
+      <td>{{ row.obj.default_qty }}</td>
+      <td>{{ row.obj.get_color_slot_display }}</td>
+      <td>{% for f in row.files %}<div>{{ f.get_kind_display }} · {{ f.name }}{% if f.printer %} · {{ f.printer.name }}{% endif %}{% if f.is_production %} <span class="pill ok">produção</span>{% endif %}{% if f.parse_error %} <span class="pill warn">{{ f.parse_error }}</span>{% endif %}</div>{% empty %}<span class="muted">sem arquivos</span>{% endfor %}</td>
+      <td class="r">{% for f in row.files %}{% if f.grams_total %}<div>{{ f.grams_total }} g</div>{% endif %}{% endfor %}</td>
+      <td class="r">{% for f in row.files %}{% if f.print_time_min %}<div>{{ f.print_time_min }} min</div>{% endif %}{% endfor %}</td>
+    </tr>
+    {% empty %}<tr><td colspan="6" class="muted">Nenhuma peça cadastrada.</td></tr>{% endfor %}
+  </table>
+</section>
+
+<section style="margin-top:32px">
+  <h2>Variantes, custo e preço</h2>
+  {% for row in variants %}
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px">
+      <h3>{{ row.obj.sku }} <span class="muted" style="font-weight:400;font-family:Manrope;font-size:14px">{{ row.obj.size }}{% if row.obj.primary_color %} · {% if row.obj.primary_color.hex %}<span class="swatch" style="background:{{ row.obj.primary_color.hex }}"></span>{% endif %}{{ row.obj.primary_color.name }}{% endif %}</span></h3>
+      <form method="post" action="{% url 'catalog:variant_recalculate' row.obj.pk %}">{% csrf_token %}<button class="btn secondary" type="submit">Recalcular custo e preços</button></form>
+    </div>
+    <div class="cols">
+      <div>
+        <div class="eyebrow">Composição</div>
+        <table>
+          {% for item in row.bom %}<tr><td>{{ item.quantity }} ×</td><td>{{ item.part|default:item.component }}</td><td class="muted">{{ item.get_kind_display }}{% if item.kind == "part" %} · {{ item.effective_slot }}{% endif %}</td></tr>{% empty %}<tr><td class="muted" colspan="3">Sem itens de composição.</td></tr>{% endfor %}
+        </table>
+        <p class="muted" style="margin-top:8px">Filamentos: principal {{ row.obj.main_filament|default:"—" }}{% if row.obj.secondary_filament %} · secundário {{ row.obj.secondary_filament }}{% endif %} · mão de obra {{ row.obj.labor_minutes }} min</p>
+      </div>
+      <div>
+        <div class="eyebrow">Custo</div>
+        {% if row.obj.cost_cached is not None %}
+        <div class="num">R$ {{ row.obj.cost_cached }}</div>
+        <table style="margin-top:8px">
+          <tr><td>Filamento</td><td class="r">{{ row.obj.cost_breakdown.filamento }}</td></tr>
+          <tr><td>Hora-máquina</td><td class="r">{{ row.obj.cost_breakdown.hora_maquina }}</td></tr>
+          <tr><td>Mão de obra</td><td class="r">{{ row.obj.cost_breakdown.mao_de_obra }}</td></tr>
+          <tr><td>Componentes</td><td class="r">{{ row.obj.cost_breakdown.componentes }}</td></tr>
+          <tr><td>Embalagem</td><td class="r">{{ row.obj.cost_breakdown.embalagem }}</td></tr>
+          <tr><td>Licença</td><td class="r">{{ row.obj.cost_breakdown.licenca }}</td></tr>
+          <tr><td>Provisão de falha</td><td class="r">{{ row.obj.cost_breakdown.falha }}</td></tr>
+        </table>
+        {% for p in row.obj.cost_breakdown.problemas %}<p class="pill warn" style="margin-top:8px">{{ p }}</p>{% endfor %}
+        <p class="muted" style="font-size:12px">Calculado em {{ row.obj.cost_cached_at|date:"d/m/Y H:i" }}</p>
+        {% else %}<p class="muted">Ainda sem custo. Clique em recalcular.</p>{% endif %}
+      </div>
+      <div>
+        <div class="eyebrow">Preço por canal</div>
+        <table>
+          <tr><th>Canal</th><th class="r">Sugerido</th><th class="r">Vigente</th><th class="r">Margem</th><th></th></tr>
+          {% for pr in row.prices %}
+          <tr><td>{{ pr.channel }}</td><td class="r">{{ pr.suggested_price }}</td><td class="r">{{ pr.current_price }}</td><td class="r">{{ pr.margin_pct }}%</td><td>{% if pr.below_minimum %}<span class="pill warn">abaixo do mín.</span>{% elif pr.approved %}<span class="pill ok">aprovado</span>{% else %}<span class="pill">a aprovar</span>{% endif %}</td></tr>
+          {% empty %}<tr><td colspan="5" class="muted">Sem preços ainda.</td></tr>{% endfor %}
+        </table>
+        <p style="margin-top:8px"><a href="{% url 'admin:costing_pricebychannel_changelist' %}?variant__id__exact={{ row.obj.pk }}">Aprovar preços no back-office</a></p>
+      </div>
+    </div>
+  </div>
+  {% empty %}<p class="muted">Nenhuma variante. <a href="{% url 'admin:catalog_variant_add' %}">Criar variante</a></p>{% endfor %}
+</section>
+{% endblock %}

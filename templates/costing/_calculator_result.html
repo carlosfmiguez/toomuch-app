@@ -1,0 +1,24 @@
+{% if result %}
+<div class="card">
+  <div class="eyebrow">Custo total</div>
+  <div class="num">R$ {{ result.breakdown.total }}</div>
+  <table style="margin-top:12px">
+    <tr><td>Filamento (com desperdício)</td><td class="r">{{ result.breakdown.filament|floatformat:2 }}</td></tr>
+    <tr><td>Hora-máquina ({{ result.hourly }} R$/h)</td><td class="r">{{ result.breakdown.machine|floatformat:2 }}</td></tr>
+    <tr><td>Mão de obra</td><td class="r">{{ result.breakdown.labor|floatformat:2 }}</td></tr>
+    <tr><td>Componentes</td><td class="r">{{ result.breakdown.components|floatformat:2 }}</td></tr>
+    <tr><td>Embalagem</td><td class="r">{{ result.breakdown.packaging|floatformat:2 }}</td></tr>
+    <tr><td>Licença</td><td class="r">{{ result.breakdown.license|floatformat:2 }}</td></tr>
+    <tr><td>Provisão de falha</td><td class="r">{{ result.breakdown.failure|floatformat:2 }}</td></tr>
+  </table>
+  <div class="eyebrow" style="margin-top:20px">Preço sugerido por canal</div>
+  <table>
+    <tr><th>Canal</th><th class="r">Taxa</th><th class="r">Fixo</th><th class="r">Frete</th><th class="r">Margem-alvo</th><th class="r">Preço</th><th class="r">Margem</th></tr>
+    {% for c in result.channels %}
+    <tr><td>{{ c.channel.name }}</td><td class="r">{{ c.fee.fee_pct }}%</td><td class="r">{{ c.price.fixed_fee_applied }}</td><td class="r">{{ c.price.shipping_applied }}</td><td class="r">{{ c.fee.target_margin_pct }}%</td><td class="r"><strong>R$ {{ c.price.suggested }}</strong></td><td class="r">{{ c.price.margin_pct }}%</td></tr>
+    {% empty %}<tr><td colspan="7" class="muted">Nenhum canal ativo com taxas. Cadastre em Canais.</td></tr>{% endfor %}
+  </table>
+</div>
+{% else %}
+<div class="card muted">Preencha os campos e clique em Calcular. Os valores iniciais reproduzem o exemplo da Luminária Solaris da especificação.</div>
+{% endif %}
