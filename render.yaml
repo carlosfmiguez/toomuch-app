@@ -1,0 +1,55 @@
+# Blueprint do Render: cria de uma vez o serviço web (Docker), o Postgres, o disco
+# dos uploads e as variáveis. No Render: New → Blueprint → escolher este repositório.
+# Só pede os valores marcados com `sync: false`.
+#
+# Custo aproximado (out/2026): web 0.5 CPU/512 MB US$ 7 + Postgres 0.1 CPU/256 MB US$ 6
+# + disco 5 GB US$ 1,25 ≈ US$ 14/mês. Região Ohio (menor latência para o Brasil entre as disponíveis).
+
+databases:
+  - name: toomuch-db
+    plan: 0.1c-256mb
+    region: ohio
+    databaseName: toomuch
+    user: toomuch
+    postgresMajorVersion: "17"
+
+services:
+  - type: web
+    name: toomuch-app
+    runtime: docker
+    plan: 0.5c-512mb
+    region: ohio
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    disk:
+      name: media
+      mountPath: /app/media
+      sizeGB: 5
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: toomuch-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: app.toomuch.art
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://app.toomuch.art
+      - key: MEDIA_ROOT
+        value: /app/media
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: TIME_ZONE
+        value: America/Sao_Paulo
+      - key: DJANGO_SUPERUSER_USERNAME
+        value: carlos
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
+      - key: TOOMUCH_WHATSAPP
+        sync: false

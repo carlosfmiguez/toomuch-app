@@ -37,9 +37,10 @@ DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 
-# Domínios que a hospedagem injeta sozinha (Railway: RAILWAY_PUBLIC_DOMAIN; Fly: FLY_APP_NAME)
+# Domínios que a hospedagem injeta sozinha (Railway: RAILWAY_PUBLIC_DOMAIN; Render: RENDER_EXTERNAL_HOSTNAME; Fly: FLY_APP_NAME)
 for _host in filter(None, [
     env("RAILWAY_PUBLIC_DOMAIN", default=""),
+    env("RENDER_EXTERNAL_HOSTNAME", default=""),
     f'{env("FLY_APP_NAME", default="")}.fly.dev' if env("FLY_APP_NAME", default="") else "",
 ]):
     if _host not in ALLOWED_HOSTS:

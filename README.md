@@ -36,6 +36,20 @@ python manage.py runserver
 
 Abra http://127.0.0.1:8000/ (painel) e http://127.0.0.1:8000/admin/ (back-office).
 
+## Deploy no Render (push → deploy automático)
+
+O `render.yaml` é um *Blueprint*: cria o serviço web (Docker), o Postgres, o disco dos uploads e as variáveis.
+
+1. [dashboard.render.com](https://dashboard.render.com) → **New → Blueprint** → conecte o GitHub e escolha `toomuch-app`.
+2. O Render lê o `render.yaml` e pede só três valores: e-mail e senha do admin e o WhatsApp (DDI+DDD+número).
+   `SECRET_KEY` é gerada automaticamente. Clique em **Apply**.
+3. Primeiro deploy (3–5 min): o start roda migrações, dados iniciais e cria o admin. Teste em
+   `https://toomuch-app.onrender.com/healthz` e `/admin/`.
+4. Serviço web → **Settings → Custom Domains** → `app.toomuch.art` e crie o CNAME indicado no DNS do toomuch.art.
+
+Custo aproximado: US$ 7 (web) + US$ 6 (Postgres) + US$ 1,25 (disco de 5 GB) ≈ US$ 14/mês. Para rodar um
+comando no ambiente: serviço web → **Shell** (no painel) → `python manage.py seed_demo`.
+
 ## Deploy no Railway (push → deploy automático)
 
 1. Crie o repositório no GitHub e conecte-o em [railway.app](https://railway.app): *New Project → Deploy from
