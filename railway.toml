@@ -1,0 +1,17 @@
+# Railway: build pelo Dockerfile e inicialização pelo scripts/start.sh
+# (migrações, dados iniciais e admin a cada deploy). No painel do Railway:
+#   - adicione um serviço Postgres e a variável DATABASE_URL=${{Postgres.DATABASE_URL}}
+#   - adicione um Volume montado em /app/media (uploads: 3MF, fotos, PDFs)
+#   - variáveis: SECRET_KEY, DEBUG=False, ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS,
+#     DJANGO_SUPERUSER_USERNAME/EMAIL/PASSWORD, TOOMUCH_WHATSAPP
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "sh scripts/start.sh"
+healthcheckPath = "/healthz"
+healthcheckTimeout = 180
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

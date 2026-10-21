@@ -36,6 +36,33 @@ python manage.py runserver
 
 Abra http://127.0.0.1:8000/ (painel) e http://127.0.0.1:8000/admin/ (back-office).
 
+## Deploy no Railway (push → deploy automático)
+
+1. Crie o repositório no GitHub e conecte-o em [railway.app](https://railway.app): *New Project → Deploy from
+   GitHub repo*. O `railway.toml` já define build pelo Dockerfile, o comando de início (`scripts/start.sh`:
+   migrações, dados iniciais e admin a cada deploy) e o healthcheck em `/healthz`.
+2. No projeto, *+ New → Database → PostgreSQL*. No serviço web, *Variables*:
+
+   | Variável | Valor |
+   | --- | --- |
+   | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (referência ao serviço Postgres) |
+   | `SECRET_KEY` | uma chave longa e aleatória |
+   | `DEBUG` | `False` |
+   | `ALLOWED_HOSTS` | `app.toomuch.art` (o domínio `*.up.railway.app` entra sozinho) |
+   | `CSRF_TRUSTED_ORIGINS` | `https://app.toomuch.art` |
+   | `DJANGO_SUPERUSER_USERNAME` / `EMAIL` / `PASSWORD` | o primeiro admin (criado no primeiro deploy) |
+   | `TOOMUCH_WHATSAPP` | número com DDI, só dígitos |
+   | `MEDIA_ROOT` | `/app/media` |
+
+3. *Settings → Volumes → Add volume* montado em `/app/media` (uploads). Alternativa: Cloudflare R2 com as
+   variáveis `STORAGE_*`.
+4. *Settings → Networking → Custom domain* → `app.toomuch.art` e crie o CNAME indicado no DNS do toomuch.art.
+5. Primeiro acesso: `https://app.toomuch.art/admin/` com o usuário das variáveis. Rode `seed_demo` só se quiser a
+   Solaris de exemplo (Actions → Operações, ou `railway run python manage.py seed_demo`).
+
+Para o workflow *Operações* (rodar comandos no ambiente a partir do GitHub), cadastre os segredos
+`RAILWAY_TOKEN` (Project → Settings → Tokens) e `RAILWAY_SERVICE` (nome do serviço web) no repositório.
+
 ## Rodar com Docker
 
 ```bash

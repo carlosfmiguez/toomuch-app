@@ -1,5 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
+from django.db import connection
+from django.http import JsonResponse
 from django.shortcuts import render
 
 from apps.catalog.models import Asset, Product, Variant
@@ -40,3 +42,13 @@ def dashboard(request):
         "open_orders": open_orders.select_related("variant__product")[:10],
     }
     return render(request, "core/dashboard.html", context)
+
+
+def healthz(request):
+    """Verificação de saúde para a hospedagem: responde 200 se o banco responde."""
+    try:
+        with connection.cursor() as cur:
+            cur.execute("SELECT 1")
+        return JsonResponse({"status": "ok"})
+    except Exception as exc:  # noqa: BLE001
+        return JsonResponse({"status": "erro", "detail": str(exc)[:200]}, status=503)

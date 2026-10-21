@@ -1,0 +1,29 @@
+# "Mãos remotas" no ambiente do Railway: roda um comando do manage.py no serviço web
+# usando a CLI do Railway. Disparado manualmente (Actions → Operações → Run workflow),
+# ou por mim via `gh workflow run ops.yml -f comando=...`.
+#
+# Precisa dos segredos do repositório: RAILWAY_TOKEN (token do projeto, em
+# Project → Settings → Tokens), RAILWAY_PROJECT_ID e RAILWAY_SERVICE (nome do serviço web).
+
+name: Operações
+
+on:
+  workflow_dispatch:
+    inputs:
+      comando:
+        description: "Comando do manage.py (ex.: seed_demo, showmigrations, recompute_prices)"
+        required: true
+        default: "showmigrations"
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar Railway CLI
+        run: npm i -g @railway/cli
+      - name: Executar no serviço web
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway run --service "${{ secrets.RAILWAY_SERVICE }}" -- python manage.py ${{ github.event.inputs.comando }}

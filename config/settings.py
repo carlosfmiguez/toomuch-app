@@ -26,6 +26,7 @@ env = environ.Env(
     STORAGE_REGION=(str, "auto"),
     STORAGE_PUBLIC_URL=(str, ""),
     CSRF_TRUSTED_ORIGINS=(list, ["https://app.toomuch.art"]),
+    MEDIA_ROOT=(str, ""),
     TOOMUCH_WHATSAPP=(str, ""),
     TOOMUCH_INSTAGRAM=(str, "toomuchbr.art"),
 )
@@ -35,6 +36,16 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
+
+# Domínios que a hospedagem injeta sozinha (Railway: RAILWAY_PUBLIC_DOMAIN; Fly: FLY_APP_NAME)
+for _host in filter(None, [
+    env("RAILWAY_PUBLIC_DOMAIN", default=""),
+    f'{env("FLY_APP_NAME", default="")}.fly.dev' if env("FLY_APP_NAME", default="") else "",
+]):
+    if _host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_host)
+    if f"https://{_host}" not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(f"https://{_host}")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -103,7 +114,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
 MEDIA_URL = "media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = Path(env("MEDIA_ROOT")) if env("MEDIA_ROOT") else BASE_DIR / "media"
 
 import sys
 
