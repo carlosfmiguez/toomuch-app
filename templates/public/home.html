@@ -1,0 +1,45 @@
+{% extends "public/base_public.html" %}
+{% block content %}
+<div class="wrap">
+  <section style="display:flex;flex-wrap:wrap;align-items:center;gap:40px 56px;padding:24px 0 64px">
+    <div style="flex:1 1 400px;min-width:0;max-width:600px;display:flex;flex-direction:column;gap:22px">
+      <div class="eyebrow">Design autoral · impresso em Florianópolis</div>
+      <h1 style="font-size:clamp(40px,7vw,72px);font-variation-settings:'SOFT' 100,'opsz' 144">Decoração 3D que transforma ambientes.</h1>
+      <p class="muted" style="margin:0;max-width:520px;font-size:18px;text-wrap:pretty">Luminárias, vasos e utilidades impressos camada por camada, sob demanda e na cor que combina com o seu espaço.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:12px">
+        <a class="btn dark" href="#catalogo">Ver o catálogo</a>
+        <a class="btn secondary" href="{{ whatsapp }}" target="_blank" rel="noopener">Pedir pelo WhatsApp</a>
+      </div>
+      <div class="muted" style="display:flex;flex-wrap:wrap;gap:20px;font-size:13px"><span>Produção sob demanda · 3 a 5 dias úteis</span><span>Enviamos para todo o Brasil</span><span>Cores sob medida</span></div>
+    </div>
+    {% if featured %}{% with page=featured.0 %}
+    <a href="{% url 'public:product' page.product.sku_base %}" style="flex:1 1 360px;min-width:0;max-width:560px;text-decoration:none;color:var(--chocolate)">
+      {% if page.photo and page.photo.thumbnail %}<img src="{{ page.photo.thumbnail.url }}" alt="{{ page.product.name }}" style="display:block;width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:16px">{% endif %}
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px"><span class="eyebrow"><span class="sw" style="background:var(--mostarda);border-color:var(--mostarda)"></span>{{ page.product.name }}</span><span style="font-size:13px;font-weight:600;color:var(--oliva)">Ver a peça</span></div>
+    </a>
+    {% endwith %}{% endif %}
+  </section>
+</div>
+
+<section class="band" id="catalogo">
+  <div class="wrap">
+    <div class="ribbed" style="margin-bottom:32px"></div>
+    <p style="margin:0;max-width:760px;font-family:Fraunces,Georgia,serif;font-variation-settings:'SOFT' 100,'opsz' 48;font-weight:500;font-size:clamp(24px,3.4vw,34px);line-height:1.25;text-wrap:balance">Nada de estoque parado. Nada de desperdício. Só design autoral, produção sob demanda e cuidado em cada camada.</p>
+  </div>
+</section>
+
+<div class="wrap">
+  {% for category, pages in by_category %}
+  <section style="padding:56px 0 8px">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:24px">
+      <h2 style="font-size:34px">{{ category.name }}</h2>
+      <a href="{% url 'public:category' category.code %}" style="font-size:14px;font-weight:600">Ver todos</a>
+    </div>
+    <div class="grid">{% for page in pages|slice:":4" %}{% include "public/_card.html" %}{% endfor %}</div>
+  </section>
+  {% empty %}
+  <section style="padding:56px 0"><p class="muted">O catálogo está sendo montado. Fale com a gente pelo WhatsApp.</p></section>
+  {% endfor %}
+  <div style="height:48px"></div>
+</div>
+{% endblock %}

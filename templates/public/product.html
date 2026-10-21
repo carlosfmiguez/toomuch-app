@@ -1,0 +1,105 @@
+{% extends "public/base_public.html" %}
+{% block title %}{{ page.product.name }} · Toomuch{% endblock %}
+{% block description %}{{ page.product.short_description|default:page.product.name }}{% endblock %}
+{% block head %}
+<style>
+  .hero-btn{display:block;width:100%;padding:0;border:0;background:var(--gesso2);border-radius:12px;overflow:hidden;cursor:pointer;aspect-ratio:4/5}
+  .hero-btn img{display:block;width:100%;height:100%;object-fit:cover;transition:filter .6s ease;filter:brightness(.58) saturate(.55)}
+  .hero-btn.lit img,.hero-btn:hover img{filter:none}
+  .state{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--oliva)}
+  .dot{width:10px;height:10px;border-radius:50%;background:#B9A98C}
+  .lit .dot,.hero-wrap:hover .dot{background:var(--mostarda);box-shadow:0 0 10px 2px rgba(216,158,34,.55)}
+  .swatches{display:flex;flex-wrap:wrap;gap:14px}
+  .swatch{width:44px;height:44px;border-radius:50%;border:0;padding:0;cursor:pointer;box-shadow:0 0 0 1px #C9B99B}
+  .swatch[aria-pressed="true"]{box-shadow:0 0 0 3px var(--gesso),0 0 0 5px var(--chocolate)}
+  .specs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 24px}
+  .specs .k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--choc2)}
+  .thumbs{display:flex;gap:10px;flex-wrap:wrap}
+  .thumbs img{width:72px;height:90px;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid transparent}
+  .thumbs img.on{border-color:var(--chocolate)}
+</style>
+{% endblock %}
+{% block content %}
+<div class="wrap">
+  <div class="eyebrow" style="margin:8px 0 24px"><a href="{% url 'public:home' %}" style="text-decoration:none">Início</a> &nbsp;/&nbsp; <a href="{% url 'public:category' page.product.category.code %}" style="text-decoration:none">{{ page.product.category.name }}</a> &nbsp;/&nbsp; {{ page.product.name }}</div>
+
+  <section style="display:flex;flex-wrap:wrap;gap:40px 56px;align-items:flex-start;padding-bottom:64px">
+    <div class="hero-wrap" style="flex:1 1 400px;min-width:0;max-width:600px;display:flex;flex-direction:column;gap:14px">
+      {% if photos %}
+      <button type="button" class="hero-btn{% if page.product.category.code != 'LUM' %} lit{% endif %}" id="hero" aria-label="{% if page.product.category.code == 'LUM' %}Acender ou apagar a luminária{% else %}Ampliar a foto{% endif %}">
+        <img id="hero-img" src="{{ photos.0.thumbnail.url|default:photos.0.file.url }}" alt="{{ page.product.name }}">
+      </button>
+      {% if page.product.category.code == 'LUM' %}
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px">
+        <span class="state"><span class="dot"></span><span id="state">Apagada</span></span>
+        <span class="muted" style="font-size:12px">Passe o mouse ou toque na foto para acender</span>
+      </div>
+      {% endif %}
+      {% if photos|length > 1 %}
+      <div class="thumbs">{% for a in photos %}<img src="{{ a.thumbnail.url|default:a.file.url }}" alt="" data-src="{{ a.thumbnail.url|default:a.file.url }}" class="{% if forloop.first %}on{% endif %}">{% endfor %}</div>
+      {% endif %}
+      {% else %}<div class="hero-btn" style="display:flex;align-items:center;justify-content:center;color:var(--choc2)">Foto em breve</div>{% endif %}
+    </div>
+
+    <div style="flex:1 1 340px;min-width:0;max-width:520px;display:flex;flex-direction:column;gap:22px">
+      <div>
+        <div class="eyebrow">{{ page.product.category.name }}{% if page.product.origin == 'own' %} · design autoral{% endif %}</div>
+        <h1 style="font-size:clamp(40px,6vw,60px);margin-top:8px;font-variation-settings:'SOFT' 100,'opsz' 72">{{ page.product.name }}</h1>
+        {% if page.product.short_description %}<p class="muted" style="margin:8px 0 0;text-wrap:pretty">{{ page.product.short_description }}</p>{% endif %}
+      </div>
+      <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+        <div style="font-family:Fraunces,Georgia,serif;font-variation-settings:'SOFT' 100;font-weight:600;font-size:36px;line-height:1">{% if page.price_from %}R$ {{ page.price_from }}{% else %}Sob consulta{% endif %}</div>
+        <div class="muted" style="font-size:13px">Sob demanda · {{ page.product.lead_time_days }} dias úteis + frete</div>
+      </div>
+      {% if page.colors %}
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--choc2)">Cor — <strong id="picked" style="color:var(--chocolate)">{{ page.colors.0.color_name }}</strong></div>
+        <div class="swatches">{% for pv in page.colors %}<button type="button" class="swatch" aria-label="{{ pv.color_name }}" aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}" data-name="{{ pv.color_name }}" style="background:{{ pv.color_hex|default:'#F6F4EF' }}"></button>{% endfor %}</div>
+        <div class="muted" style="font-size:13px">Quer outra cor? Mande uma foto da inspiração pelo WhatsApp.</div>
+      </div>
+      {% endif %}
+      <div style="display:flex;flex-wrap:wrap;gap:12px">
+        <a class="btn dark" id="ask" href="{{ ask }}" target="_blank" rel="noopener">Pedir pelo WhatsApp</a>
+        {% if ml_url %}<a class="btn secondary" href="{{ ml_url }}" target="_blank" rel="noopener">Comprar no Mercado Livre</a>{% endif %}
+      </div>
+      <div class="ribbed"></div>
+      <div class="specs">
+        {% if page.product.height_mm %}<div><div class="k">Altura</div><div>{{ page.product.height_mm }} mm</div></div>{% endif %}
+        {% if page.product.width_mm %}<div><div class="k">Largura / diâmetro</div><div>{{ page.product.width_mm }} mm</div></div>{% endif %}
+        {% if page.product.depth_mm and page.product.depth_mm != page.product.width_mm %}<div><div class="k">Profundidade</div><div>{{ page.product.depth_mm }} mm</div></div>{% endif %}
+        {% if page.product.weight_g %}<div><div class="k">Peso</div><div>{{ page.product.weight_g }} g</div></div>{% endif %}
+        <div><div class="k">Material</div><div>PLA, impresso em 3D camada por camada</div></div>
+        <div><div class="k">Prazo</div><div>{{ page.product.lead_time_days }} dias úteis + frete</div></div>
+      </div>
+      {% if page.product.long_description %}<p style="margin:0;text-wrap:pretty">{{ page.product.long_description|linebreaksbr }}</p>{% endif %}
+    </div>
+  </section>
+</div>
+
+{% if related %}
+<div class="wrap">
+  <section style="padding:0 0 64px">
+    <h2 style="font-size:34px;margin-bottom:24px">Você também vai gostar</h2>
+    <div class="grid">{% for page in related %}{% include "public/_card.html" %}{% endfor %}</div>
+  </section>
+</div>
+{% endif %}
+
+<script>
+(function(){
+  var hero=document.getElementById('hero'),state=document.getElementById('state');
+  if(hero&&state){hero.addEventListener('click',function(){var on=hero.classList.toggle('lit');state.textContent=on?'Acesa':'Apagada';});
+    hero.addEventListener('mouseenter',function(){state.textContent='Acesa';});
+    hero.addEventListener('mouseleave',function(){if(!hero.classList.contains('lit'))state.textContent='Apagada';});}
+  var picked=document.getElementById('picked'),ask=document.getElementById('ask'),base=ask?ask.getAttribute('href'):'';
+  document.querySelectorAll('.swatch').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('.swatch').forEach(function(x){x.setAttribute('aria-pressed','false');});
+    b.setAttribute('aria-pressed','true');if(picked)picked.textContent=b.dataset.name;
+    if(ask&&base&&base!=='#')ask.setAttribute('href',base+encodeURIComponent(' Cor: '+b.dataset.name));
+  });});
+  var img=document.getElementById('hero-img');
+  document.querySelectorAll('.thumbs img').forEach(function(t){t.addEventListener('click',function(){
+    document.querySelectorAll('.thumbs img').forEach(function(x){x.classList.remove('on');});t.classList.add('on');if(img)img.src=t.dataset.src;});});
+})();
+</script>
+{% endblock %}

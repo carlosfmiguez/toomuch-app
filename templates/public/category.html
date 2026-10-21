@@ -1,0 +1,11 @@
+{% extends "public/base_public.html" %}
+{% block title %}{{ category.name }} · Toomuch{% endblock %}
+{% block content %}
+<div class="wrap">
+  <section style="padding:16px 0 64px">
+    <div class="eyebrow" style="margin-bottom:10px"><a href="{% url 'public:home' %}" style="text-decoration:none">Início</a> &nbsp;/&nbsp; {{ category.name }}</div>
+    <h1 style="font-size:clamp(36px,6vw,56px);margin-bottom:28px">{{ category.name }}</h1>
+    <div class="grid">{% for page in pages %}{% include "public/_card.html" %}{% empty %}<p class="muted">Ainda não há peças nesta categoria.</p>{% endfor %}</div>
+  </section>
+</div>
+{% endblock %}

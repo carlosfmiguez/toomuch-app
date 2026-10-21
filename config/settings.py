@@ -26,6 +26,8 @@ env = environ.Env(
     STORAGE_REGION=(str, "auto"),
     STORAGE_PUBLIC_URL=(str, ""),
     CSRF_TRUSTED_ORIGINS=(list, ["https://app.toomuch.art"]),
+    TOOMUCH_WHATSAPP=(str, ""),
+    TOOMUCH_INSTAGRAM=(str, "toomuchbr.art"),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -103,13 +105,23 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+import sys
+
+RUNNING_TESTS = "test" in sys.argv[1:2]
+
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage" if DEBUG
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage" if (DEBUG or RUNNING_TESTS)
         else "whitenoise.storage.CompressedManifestStaticFilesStorage"
     },
 }
+
+if RUNNING_TESTS:
+    # Uploads dos testes vão para uma pasta temporária, nunca para ./media
+    import tempfile
+
+    MEDIA_ROOT = Path(tempfile.mkdtemp(prefix="toomuch-test-media-"))
 
 if env("STORAGE_BUCKET"):
     STORAGES["default"] = {
@@ -128,6 +140,10 @@ if env("STORAGE_BUCKET"):
     }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Catálogo público
+TOOMUCH_WHATSAPP = env("TOOMUCH_WHATSAPP")  # só dígitos com DDI, ex.: 5548999999999
+TOOMUCH_INSTAGRAM = env("TOOMUCH_INSTAGRAM")
 
 LOGIN_URL = "/admin/login/"
 LOGIN_REDIRECT_URL = "/"

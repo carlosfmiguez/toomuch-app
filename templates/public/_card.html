@@ -1,0 +1,5 @@
+<a class="card" href="{% url 'public:product' page.product.sku_base %}">
+  {% if page.photo and page.photo.thumbnail %}<img src="{{ page.photo.thumbnail.url }}" alt="{{ page.product.name }}" loading="lazy">{% else %}<div class="ph"></div>{% endif %}
+  <div class="n">{{ page.product.name }}</div>
+  <div class="p">{% if page.price_from %}R$ {{ page.price_from }}{% else %}sob consulta{% endif %} · {{ page.product.category.name|lower }}</div>
+</a>

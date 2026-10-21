@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Importação em lote · Sistema Toomuch{% endblock %}
+{% block content %}
+<div class="eyebrow">Catálogo</div>
+<h1>Importação em lote</h1>
+<p class="muted">Três passos: envie um zip com as fotos e arquivos 3D (uma subpasta por produto, ou arquivos soltos nomeados pelo produto), baixe a planilha de mapeamento, revise nomes, categorias e SKUs e envie a planilha de volta. Os produtos entram como rascunho, com fotos e arquivos anexados; arquivos repetidos (mesmo hash) são ignorados.</p>
+
+<div class="cols" style="margin-top:20px">
+  <section class="card">
+    <h2>1. Enviar o zip</h2>
+    <form class="stack" method="post" action="{% url 'catalog:import_upload' %}" enctype="multipart/form-data">{% csrf_token %}
+      <label>{{ upload.arquivo.label }} {{ upload.arquivo }}<span class="muted">{{ upload.arquivo.help_text }}</span></label>
+      <button class="btn" type="submit">Enviar e detectar produtos</button>
+    </form>
+    <p class="muted" style="margin-top:12px">Pela linha de comando: <code>python manage.py importar_pasta /pasta --mapa mapa.xlsx</code> e depois <code>--aplicar mapa.xlsx</code>.</p>
+  </section>
+
+  {% if batch %}
+  <section class="card">
+    <h2>2. Revisar a planilha</h2>
+    <p>{{ candidates|length }} produto(s) detectado(s) neste lote.</p>
+    <a class="btn" href="{% url 'catalog:import_mapping' batch %}">Baixar planilha de mapeamento</a>
+    <h2 style="margin-top:24px">3. Aplicar</h2>
+    <form class="stack" method="post" action="{% url 'catalog:import_apply' %}" enctype="multipart/form-data">{% csrf_token %}
+      {{ apply_form.lote }}
+      <label>{{ apply_form.planilha.label }} {{ apply_form.planilha }}</label>
+      <button class="btn" type="submit">Importar conforme a planilha</button>
+    </form>
+  </section>
+  {% endif %}
+</div>
+
+{% if candidates %}
+<h2 style="margin-top:32px">Produtos detectados</h2>
+<table>
+  <tr><th>Importar</th><th>Pasta/chave</th><th>Nome</th><th>Categoria</th><th>SKU-base</th><th class="r">Fotos</th><th class="r">Arquivos 3D</th><th>Observação</th></tr>
+  {% for c in candidates %}
+  <tr>
+    <td>{% if c.import_it %}<span class="pill ok">sim</span>{% else %}<span class="pill warn">revisar</span>{% endif %}</td>
+    <td>{{ c.key }}</td>
+    <td>{{ c.name|default:"—" }}</td>
+    <td>{{ c.category_code }}</td>
+    <td>{{ c.sku_base|default:"—" }}</td>
+    <td class="r">{{ c.photos|length }}</td>
+    <td class="r">{{ c.models|length }}</td>
+    <td class="muted">{% if c.existing %}já existe: anexa a {{ c.existing.sku_base }}{% elif not c.name %}sem nome reconhecível{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

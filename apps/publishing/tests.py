@@ -109,3 +109,41 @@ class CatalogTests(TestCase):
         resp = self.client.get(reverse("publishing:export_marketplace", args=["shopee"]), {"canal": Channel.objects.get(name="Shopee").pk})
         self.assertEqual(resp.status_code, 200)
         self.assertIn("text/csv", resp["Content-Type"])
+
+
+class PublicCatalogTests(TestCase):
+    """Loja pública: só produtos prontos, sem login, com preço do canal Site."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_demo", verbosity=0)
+        cls.product = Product.objects.get(sku_base="TM-LUM-SOL")
+        cls.variant = Variant.objects.get(sku="TM-LUM-SOL-G-BRC")
+        cls.user = get_user_model().objects.create_superuser("carlos", "c@example.com", "senha-forte-123")
+
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()  # o cache sobrevive ao rollback do banco entre testes
+
+    def test_unready_product_is_hidden(self):
+        resp = self.client.get(reverse("public:home"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, "TM-LUM-SOL")
+        self.assertEqual(self.client.get(reverse("public:product", args=["TM-LUM-SOL"])).status_code, 404)
+
+    def test_ready_product_is_public(self):
+        Asset.objects.create(product=self.product, kind=Asset.Kind.PHOTO, is_main=True,
+                             file=SimpleUploadedFile("solaris.jpg", tiny_jpeg(), content_type="image/jpeg"))
+        for row in latest_prices(self.variant):
+            approve_price(row, self.user, price=row.suggested_price)
+        resp = self.client.get(reverse("public:home"))
+        self.assertContains(resp, "Luminária Solaris")
+        self.assertContains(resp, "118,90")
+        resp = self.client.get(reverse("public:category", args=["lum"]))
+        self.assertContains(resp, "Luminária Solaris")
+        resp = self.client.get(reverse("public:product", args=["tm-lum-sol"]))
+        self.assertContains(resp, "Acender ou apagar")
+        self.assertContains(resp, "Branco")
+        self.assertContains(resp, "118,90")
+        self.assertNotContains(resp, "admin/")

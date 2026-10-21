@@ -1,0 +1,62 @@
+{% load static %}<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Toomuch — decoração 3D{% endblock %}</title>
+  <meta name="description" content="{% block description %}Luminárias, vasos e utilidades impressos em 3D, camada por camada, em Florianópolis. Design autoral, produção sob demanda e cores sob medida.{% endblock %}">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..900,0..100&family=Manrope:wght@300..800&display=swap" rel="stylesheet">
+  <style>
+    :root{--gesso:#F3EEE6;--gesso2:#EAE1D1;--areia:#D9C7A6;--oliva:#5B6640;--chocolate:#4A2E1E;--choc2:#7A6657;--mostarda:#D89E22}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--gesso);color:var(--chocolate);font-family:Manrope,system-ui,sans-serif;font-size:16px;line-height:1.6}
+    a{color:var(--oliva)}a:hover{color:var(--chocolate)}
+    h1,h2,h3{font-family:Fraunces,Georgia,serif;font-variation-settings:'SOFT' 100;font-weight:600;line-height:1.05;margin:0;text-wrap:balance}
+    .wrap{max-width:1280px;margin:0 auto;padding:0 20px}
+    @media (min-width:900px){.wrap{padding:0 40px}}
+    header.top{display:flex;flex-wrap:wrap;align-items:center;gap:16px 24px;padding:18px 0}
+    header.top img{height:28px;width:auto;display:block}
+    header.top nav{display:flex;flex-wrap:wrap;gap:16px 24px}
+    header.top nav a{font-size:14px;font-weight:600;text-decoration:none;color:var(--chocolate)}
+    header.top nav a.dim{color:var(--choc2)}
+    .spacer{flex:1}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:46px;padding:10px 22px;border-radius:999px;background:var(--oliva);color:var(--gesso);font-size:15px;font-weight:600;text-decoration:none;border:0}
+    .btn.dark{background:var(--chocolate)}
+    .btn.secondary{background:transparent;color:var(--chocolate);border:1px solid var(--chocolate)}
+    .btn svg{width:18px;height:18px}
+    .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--oliva);font-weight:600}
+    .muted{color:var(--choc2)}
+    .ribbed{height:10px;background:repeating-linear-gradient(90deg,var(--chocolate) 0 1px,transparent 1px 4px);opacity:.22}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:32px}
+    .card{display:flex;flex-direction:column;gap:10px;text-decoration:none;color:var(--chocolate)}
+    .card img,.card .ph{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:12px;display:block;background:var(--gesso2)}
+    .card .n{font-weight:600}
+    .card .p{font-size:13px;color:var(--choc2)}
+    section.band{background:var(--gesso2);padding:48px 0}
+    footer.bottom{border-top:1px solid var(--areia);padding:28px 0;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;font-size:12px;color:var(--choc2)}
+    footer.bottom img{height:22px}
+    .sw{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #C9B99B;vertical-align:-2px;margin-right:6px}
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <a href="{% url 'public:home' %}" aria-label="Too Much, início"><img src="{% static 'img/toomuch-wordmark.png' %}" alt="Too Much"></a>
+  <nav aria-label="Categorias">
+    {% for c in categories %}<a href="{% url 'public:category' c.code %}" {% if category and category.pk == c.pk %}aria-current="page"{% else %}class="dim"{% endif %}>{{ c.name }}</a>{% endfor %}
+  </nav>
+  <span class="spacer"></span>
+  <a class="btn" href="{{ whatsapp }}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 21l2.1-5.4A8.5 8.5 0 1 1 21 11.5z"></path></svg>Pedir pelo WhatsApp</a>
+</header>
+</div>
+{% block content %}{% endblock %}
+<div class="wrap">
+<footer class="bottom">
+  <img src="{% static 'img/toomuch-wordmark.png' %}" alt="Too Much">
+  <span>toomuch.art · @{{ instagram }} · Florianópolis, SC</span>
+  <span>Design autoral · produção sob demanda · enviamos para todo o Brasil</span>
+</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Importar em lote · Sistema Toomuch{% endblock %}
+{% block content %}
+<div class="eyebrow">Catálogo</div>
+<h1>Importar em lote</h1>
+<p class="muted">Envie um ZIP com uma pasta por modelo (STL, 3MF, STEP, F3D e fotos dentro). Arquivos soltos na raiz são agrupados pelo nome. Você revisa nome, categoria, SKU e origem antes de criar os produtos, que entram como rascunho.</p>
+<div class="cols">
+  <form class="stack card" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <label>ZIP com os modelos e fotos (até {{ max_mb }} MB) <input type="file" name="zip" accept=".zip"></label>
+    <label>ou pasta já no servidor <input type="text" name="folder" placeholder="/dados/thangs"></label>
+    <button class="btn" type="submit">Analisar</button>
+  </form>
+  <div class="card">
+    <div class="eyebrow">Como organizar a pasta</div>
+    <pre style="font-size:13px;line-height:1.5;margin:10px 0 0;white-space:pre-wrap">modelos/
+  Luminaria Solaris/
+    cupula.stl
+    base.stl
+    solaris-acesa.jpg
+  Vaso Face/
+    vaso-face.3mf
+    vaso-face-1.jpg
+    vaso-face-2.jpg
+  porta-escova.stl        ← soltos na raiz
+  porta-escova.jpg           viram "Porta escova"</pre>
+    <p class="muted" style="margin-top:10px">Arquivos já importados (mesmo conteúdo) são ignorados, então pode reenviar a mesma pasta com novidades.</p>
+    <p class="muted">Pelo terminal: <code>python manage.py import_folder PASTA --mapear planilha.xlsx</code> gera a planilha de mapeamento; <code>--aplicar planilha.xlsx</code> importa.</p>
+  </div>
+</div>
+{% endblock %}

@@ -17,8 +17,10 @@ lista de preço e calculadora rápida.
 | Publicação | **Catálogo PDF** (capa, sumário e uma página A4 por produto, no modelo visual da marca, com WeasyPrint), prévia em HTML, página individual por produto; **planilhas de anúncios** para Mercado Livre e Shopee (CSV ou XLSX) com título dentro do limite, descrição estruturada, preço do canal, medidas e fotos; `Publication` registra o que foi enviado |
 | Dados iniciais | `seed_base` cria parâmetros (energia 0,95; mão de obra 30; desperdício 2 %; falha 5 %; Simples 4 %), impressoras a R$ 3.000, canais Site/ML/Shopee e cores; `seed_demo` cria a Solaris de exemplo |
 
-Ainda não existe: página web pública do catálogo (E6), importação em lote (E6), integração Tiny e
-Bambu ao vivo (E7/E8), perfis de permissão.
+| Loja pública | `/loja/` sem login: home por categoria, página de categoria e página de produto no modelo desenhado (a luminária acende ao passar o mouse, swatches de cor, botão de WhatsApp com mensagem pronta); só produtos com checklist completo e preço do canal Site |
+| Importação em lote | Tela **Produtos → Importar em lote** (ZIP ou pasta no servidor) com revisão de nome, categoria, SKU e origem antes de criar; ou `manage.py import_folder` com planilha de mapeamento XLSX; idempotente por hash |
+
+Ainda não existe: integração Tiny e Bambu ao vivo (E7/E8), perfis de permissão.
 
 ## Rodar em desenvolvimento
 
@@ -80,6 +82,23 @@ e escolha a impressora para a qual foi fatiado; a leitura acontece no upload.
    baixado automaticamente.
 7. **Catálogo** (menu Catálogo): escolha o canal da lista de preço, baixe o PDF ou a planilha de anúncios.
    Entram os produtos ativos com o checklist completo; "incluir todos" mostra também os incompletos.
+8. **Loja** (`/loja/`): os mesmos produtos prontos, públicos. Configure `TOOMUCH_WHATSAPP` no `.env`
+   (só dígitos com DDI) para o botão de pedido funcionar.
+
+## Importar os modelos existentes
+
+Organize uma pasta com uma subpasta por modelo (STL/3MF/STEP/F3D + fotos) — arquivos soltos na raiz são
+agrupados pelo nome (`vaso-face.stl` + `vaso-face-1.jpg`). Depois:
+
+```bash
+python manage.py import_folder /caminho/modelos --mapear mapeamento.xlsx   # gera a planilha para revisar
+# revise nome, categoria, SKU-base, origem/licença e a coluna "Importar?"
+python manage.py import_folder /caminho/modelos --aplicar mapeamento.xlsx  # cria os produtos em rascunho
+```
+
+Ou pela tela **Produtos → Importar em lote**, enviando a pasta compactada em ZIP. Cada modelo vira um
+produto em rascunho com uma variante "Único", uma peça por arquivo 3D, fotos com thumbnail e a leitura de
+dimensões do STL. Falta então: fatiar e subir o 3MF de produção, mapear filamento, aprovar preço.
 
 ## Catálogo PDF
 
@@ -104,7 +123,6 @@ templates/         base com a identidade visual (gesso, chocolate, Fraunces + Ma
 
 ## Próximos passos (roadmap)
 
-- E6: página pública do catálogo (mesmo modelo do PDF) e importação em lote (Thangs + pasta de fotos).
 - E7: Tiny ERP — envio de produtos, pedidos pagos virando ordens.
 - E8: status ao vivo das Bambu (MQTT em modo LAN) e relatórios de margem e giro.
 - Hospedagem em app.toomuch.art (VPS + Docker Compose + HTTPS) e backup diário.
