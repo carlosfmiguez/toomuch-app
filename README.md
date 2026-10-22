@@ -25,6 +25,16 @@ mesmo shell.
 | Interface | Shell do **django-unfold** com cores da marca (`config/unfold.py`): sidebar em grupos (Operação, Custo e preço, Estoque, Cadastros, Integrações, Administração) com contadores de pendências e impressões, busca global, avatar e menu do usuário, modo claro/escuro, login com foto de produto; painel com KPIs e alertas em `templates/admin/index.html`; telas próprias estendem `templates/shell.html`; CSS em `static/css/toomuch-admin.css`; traduções do shell em `locale/pt_BR` |
 | Tiny ERP (E7) | Tela **Tiny** no menu: cadastro do aplicativo (Client ID/Secret), conexão OAuth 2 com renovação automática do token (4 h) e do refresh (1 dia), **envio de produtos** prontos para catálogo (cria ou atualiza pelo SKU, com preço do canal escolhido, medidas, peso, fotos e estoque pronto; só reenvia o que mudou) e **importação de pedidos** nas situações configuradas (padrão 3 = Aprovada) virando ordens de produção, uma vez por pedido; `manage.py tiny_sync` para agendar |
 
+## Conector do Claude (MCP)
+
+O sistema expõe um servidor MCP em `/mcp` (Streamable HTTP, JSON-RPC) com OAuth 2.1 próprio
+(`/.well-known/oauth-authorization-server`, registro dinâmico, PKCE S256, login do Django e consentimento).
+No Claude: **Configurações → Conectores → Adicionar conector personalizado** com `https://<domínio>/mcp`.
+Ferramentas em `apps/connector/tools.py` (resumo, listar/ver/criar/atualizar produto, peças, variantes,
+aprovar preços, filamentos, compras, componentes, importar pacote ou arquivo por link). Para baixar de
+repositório privado do GitHub, defina `GITHUB_TOKEN` (somente leitura) no servidor. Acessos ficam em
+**Integrações → Acessos do Claude**, de onde podem ser revogados.
+
 Ainda não existe: Bambu ao vivo e relatórios (E8), perfis de permissão.
 
 ## Rodar em desenvolvimento

@@ -114,6 +114,7 @@ UNFOLD = {
                 "separator": True,
                 "items": [
                     {"title": _("Tiny ERP"), "icon": "sync_alt", "link": reverse_lazy("tiny:status")},
+                    {"title": _("Acessos do Claude"), "icon": "smart_toy", "link": reverse_lazy("admin:connector_accesstoken_changelist")},
                 ],
             },
             {

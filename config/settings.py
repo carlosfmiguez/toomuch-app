@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "apps.production",
     "apps.publishing",
     "apps.integrations.tiny",
+    "apps.connector",
 ]
 
 MIDDLEWARE = [
