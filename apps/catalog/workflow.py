@@ -59,7 +59,10 @@ def steps_for(product: Product) -> list[Step]:
         todo.append("Cadastre ao menos uma peça impressa.")
     for p in parts:
         if not p.production_assets().exists():
-            todo.append(f"Suba o 3MF fatiado da peça “{p.name}”.")
+            if p.has_estimate:
+                todo.append(f"Suba o 3MF fatiado da peça “{p.name}” (o custo usa a estimativa de {p.est_label}).")
+            else:
+                todo.append(f"Suba o 3MF fatiado da peça “{p.name}”.")
     s2 = Step("pecas", 2, "Peças e 3MF fatiado", done=bool(parts) and not todo, todo=todo, anchor="pecas")
 
     # 3. Variantes
@@ -130,11 +133,13 @@ def sync_bom_with_parts(product: Product) -> None:
     """Peça nova (própria ou compartilhada) entra na composição de todas as variantes; peça desvinculada sai."""
     from .models import BOMItem
 
+    parts = product.all_parts()
     for v in product.variants.all():
         have = set(v.bom_items.filter(kind=BOMItem.Kind.PART).values_list("part_id", flat=True))
-        for part in [p for p in product.all_parts() if p.pk not in have]:
+        fitting = [p for p in parts if p.fits(v)]
+        for part in [p for p in fitting if p.pk not in have]:
             BOMItem.objects.create(variant=v, kind=BOMItem.Kind.PART, part=part, quantity=part.default_qty)
-        allowed = {p.pk for p in product.all_parts()}
+        allowed = {p.pk for p in fitting}
         v.bom_items.filter(kind=BOMItem.Kind.PART).exclude(part_id__in=allowed).delete()
 
 

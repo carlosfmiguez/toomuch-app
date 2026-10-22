@@ -116,9 +116,23 @@
               <span class="tm-sep">·</span><strong>{{ p.production.print_time_min|hm }}</strong>
               <span class="tm-sep">·</span><span class="tm-muted">{{ p.production.printer.name|default:"qualquer impressora" }} · v{{ p.production.version }} · {{ p.production.name|truncatechars:40 }}</span>
             </div>
+            {% elif p.obj.has_estimate %}
+            <div class="tm-part__file tm-part__file--estimate"><span class="material-symbols-outlined">edit_note</span>Sem 3MF: o custo usa a estimativa
+              <strong>{{ p.obj.est_grams|floatformat:"-1" }} g</strong>{% if p.obj.est_minutes %}<span class="tm-sep">·</span><strong>{{ p.obj.est_minutes|hm }}</strong>{% endif %}. Suba o 3MF para confirmar.</div>
             {% else %}
             <div class="tm-part__file tm-part__file--missing"><span class="material-symbols-outlined">upload</span>Falta o 3MF fatiado desta peça.</div>
             {% endif %}
+            {% if p.obj.only_sizes %}<div class="tm-small tm-muted">Só no{{ p.obj.size_list|pluralize }} tamanho{{ p.obj.size_list|pluralize }} {{ p.obj.only_sizes }}.</div>{% endif %}
+
+            <details class="tm-more"{% if p.form.errors %} open{% endif %}><summary>Estimativa sem 3MF e tamanhos</summary>
+              <form method="post" action="{% url 'catalog:part_update' p.obj.pk %}" class="tm-partform" style="margin-top:10px">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <label class="tm-field">Gramas estimadas{{ p.form.est_grams }}</label>
+                <label class="tm-field">Tempo estimado (min){{ p.form.est_minutes }}</label>
+                <label class="tm-field tm-field--grow">Só nos tamanhos{{ p.form.only_sizes }}</label>
+                <button class="tm-btn tm-btn--secondary tm-btn--icon" type="submit" title="Salvar"><span class="material-symbols-outlined">save</span></button>
+              </form>
+              <p class="tm-small tm-muted" style="margin:6px 0 0">A estimativa vale só enquanto não houver 3MF fatiado. "Só nos tamanhos" (ex.: G ou P, M) põe a peça apenas nas variantes desses tamanhos.</p>
+            </details>
 
             <form method="post" enctype="multipart/form-data" action="{% url 'catalog:part_upload' p.obj.pk %}" class="tm-upload">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
               <label class="tm-file">

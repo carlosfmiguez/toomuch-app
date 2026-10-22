@@ -185,6 +185,8 @@ def _product_info(p: Product, base: str, full: bool = True) -> dict:
                         "custo_por_unidade": str(p.license_cost_per_unit), "exige_atribuicao": p.license_attribution_required},
             "pecas": [{
                 "id": part.pk, "nome": part.name, "qtd": part.default_qty, "slot_cor": part.get_color_slot_display(),
+                "so_nos_tamanhos": part.only_sizes or None,
+                "estimativa": {"gramas": str(part.est_grams), "minutos": part.est_minutes} if part.has_estimate else None,
                 "compartilhada_de": part.product.sku_base if part.product_id != p.pk else None,
                 "arquivos": [{"id": a.pk, "nome": a.name, "tipo": a.get_kind_display(), "producao": a.is_production,
                               "gramas": str(a.grams_total) if a.grams_total else None, "minutos": a.print_time_min,
@@ -431,14 +433,19 @@ def mudar_status(user, base, produto, status):
     "acao": {"type": "string", "enum": ["criar", "alterar", "remover", "compartilhar", "copiar"]},
     "peca_id": {**I, "description": "para alterar/remover, ou a peça de outro produto para compartilhar/copiar"},
     "nome": S, "quantidade": I, "slot_cor": {"type": "string", "enum": ["principal", "secundaria"]},
+    "gramas_estimadas": {**N, "description": "custo usa isto enquanto não houver 3MF"},
+    "minutos_estimados": I,
+    "tamanhos": {**S, "description": "só nestes tamanhos de variante, ex.: 'G' ou 'P, M'; vazio = todos"},
 }, ["produto", "acao"])
-def gerenciar_peca(user, base, produto, acao, peca_id=None, nome="", quantidade=None, slot_cor=""):
+def gerenciar_peca(user, base, produto, acao, peca_id=None, nome="", quantidade=None, slot_cor="",
+                   gramas_estimadas=None, minutos_estimados=None, tamanhos=None):
     p = _product(produto)
     slot = {"principal": Part.ColorSlot.MAIN, "secundaria": Part.ColorSlot.SECONDARY}.get(slot_cor)
     if acao == "criar":
         if not nome:
             raise ToolError("Informe o nome da peça.")
         part = Part.objects.create(product=p, name=nome, default_qty=quantidade or 1, color_slot=slot or Part.ColorSlot.MAIN)
+        _apply_part_extras(part, gramas_estimadas, minutos_estimados, tamanhos)
     else:
         part = Part.objects.filter(pk=peca_id).first() if peca_id else None
         if part is None:
@@ -452,6 +459,7 @@ def gerenciar_peca(user, base, produto, acao, peca_id=None, nome="", quantidade=
             if slot:
                 part.color_slot = slot
             part.save()
+            _apply_part_extras(part, gramas_estimadas, minutos_estimados, tamanhos)
         elif acao == "remover":
             if part.product_id != p.pk:
                 p.shared_parts.remove(part)
@@ -473,6 +481,124 @@ def gerenciar_peca(user, base, produto, acao, peca_id=None, nome="", quantidade=
     workflow.sync_bom_with_parts(p)
     workflow.refresh_product(p)
     return _product_info(p, base)
+
+
+def _apply_part_extras(part: Part, grams=None, minutes=None, sizes=None) -> None:
+    changed = False
+    if grams is not None:
+        part.est_grams = _dec(grams, "gramas_estimadas") if str(grams).strip() not in ("", "0") else None
+        changed = True
+    if minutes is not None:
+        part.est_minutes = int(minutes) or None
+        changed = True
+    if sizes is not None:
+        part.only_sizes = ", ".join(x.strip().upper() for x in str(sizes).replace(";", ",").split(",") if x.strip())
+        changed = True
+    if changed:
+        part.save()
+
+
+SLOTS = {"principal": Part.ColorSlot.MAIN, "secundaria": Part.ColorSlot.SECONDARY}
+
+
+@tool("cadastrar_produto_completo",
+      "Cria ou atualiza (sem duplicar) um produto inteiro de uma vez: dados, peças com gramas/tempo estimados "
+      "(usados no custo até subir o 3MF) e restrição por tamanho, e variantes com filamentos. Recalcula custo e preços "
+      "sugeridos (não aprova). Produto existente: informe 'produto' (SKU); peças casam pelo nome; variantes pelo tamanho. "
+      "A peça provisória 'Peça única' sem arquivo é substituída pelas peças informadas.", {
+          "produto": {**S, "description": "SKU-base existente; vazio = procura pelo nome exato ou cria"},
+          "nome": S, "categoria": S,
+          "origem": {"type": "string", "enum": ["autoral", "licenciado", "sem_licenca"],
+                     "description": "só para produto novo; padrão sem_licenca"},
+          "descricao_curta": S, "altura_mm": I, "largura_mm": I, "profundidade_mm": I,
+          "colecoes": {"type": "array", "items": S, "description": "adiciona às coleções (cria se não existir)"},
+          "pecas": {"type": "array", "items": {"type": "object", "properties": {
+              "nome": S, "gramas": N, "minutos": I, "quantidade": I,
+              "slot": {"type": "string", "enum": ["principal", "secundaria"]},
+              "tamanhos": {**S, "description": "ex.: 'G' — só nas variantes desse tamanho"},
+          }, "required": ["nome"]}},
+          "variantes": {"type": "array", "items": {"type": "object", "properties": {
+              "tamanho": S, "filamento_principal": S, "filamento_secundario": S, "cor_principal": S, "cor_secundaria": S,
+          }, "required": ["filamento_principal"]}},
+      }, ["nome"])
+def cadastrar_produto_completo(user, base, nome, produto="", categoria="", origem="", descricao_curta="",
+                               altura_mm=None, largura_mm=None, profundidade_mm=None, colecoes=None, pecas=None, variantes=None):
+    from apps.catalog.models import Collection
+
+    with transaction.atomic():
+        p = _product(produto) if produto else Product.objects.filter(name__iexact=nome.strip()).first()
+        created = p is None
+        if created:
+            if not categoria:
+                raise ToolError("Produto novo: informe a categoria.")
+            cat = _category(categoria)
+            p = Product.objects.create(
+                name=nome.strip(), category=cat, status=Product.Status.DRAFT,
+                sku_base=importer.suggest_sku(nome, cat.code, set(Product.objects.values_list("sku_base", flat=True))),
+                origin=ORIGINS[origem or "sem_licenca"], short_description=descricao_curta or "",
+            )
+        elif descricao_curta and not p.short_description:
+            p.short_description = descricao_curta
+        # medidas: preenche as que faltam (não sobrescreve o que já foi medido)
+        for field, value in (("height_mm", altura_mm), ("width_mm", largura_mm), ("depth_mm", profundidade_mm)):
+            if value and not getattr(p, field):
+                setattr(p, field, int(value))
+        p.save()
+        if colecoes:
+            p.collections.add(*[Collection.get_or_create_by_name(c) for c in colecoes if str(c).strip()])
+
+        log = []
+        if pecas:
+            own = list(p.parts.all())
+            names = {str(x["nome"]).strip().lower() for x in pecas}
+            if len(own) == 1 and own[0].name == "Peça única" and "peça única" not in names \
+                    and not own[0].assets.exists() and not own[0].shared_in.exists():
+                own[0].bom_items.all().delete()
+                own[0].delete()
+                log.append("peça provisória 'Peça única' substituída")
+            for spec in pecas:
+                pname = str(spec["nome"]).strip()[:80]
+                part = p.parts.filter(name__iexact=pname).first()
+                if part is None:
+                    part = Part.objects.create(product=p, name=pname)
+                    log.append(f"peça criada: {pname}")
+                part.default_qty = int(spec.get("quantidade") or part.default_qty or 1)
+                part.color_slot = SLOTS.get(spec.get("slot") or "principal", Part.ColorSlot.MAIN)
+                part.save()
+                part.bom_items.update(quantity=part.default_qty)
+                _apply_part_extras(part, spec.get("gramas"), spec.get("minutos"), spec.get("tamanhos", ""))
+
+        for spec in variantes or []:
+            size = (spec.get("tamanho") or "Único").strip()
+            v = p.variants.filter(size__iexact=size).first()
+            color = _color(spec.get("cor_principal"))
+            if v is None:
+                v = Variant.objects.create(
+                    product=p, sku=workflow.suggest_variant_sku(p, size, color), size=size, primary_color=color,
+                    is_default=not p.variants.exists(),
+                )
+                log.append(f"variante criada: {v.sku}")
+            elif color:
+                v.primary_color = color
+            v.main_filament = _filament(spec["filamento_principal"])
+            if spec.get("filamento_secundario"):
+                v.secondary_filament = _filament(spec["filamento_secundario"])
+            if spec.get("cor_secundaria"):
+                v.secondary_color = _color(spec["cor_secundaria"])
+            v.save()
+        workflow.sync_bom_with_parts(p)
+        for v in p.variants.all():
+            workflow.refresh_variant(v)
+
+    site = []
+    for v in p.variants.all():
+        rows = {r["canal"]: r["sugerido"] for r in _price_rows(v)}
+        site.append({"sku": v.sku, "custo": str(v.cost_cached) if v.cost_cached is not None else None,
+                     "composicao": [f"{b.quantity.normalize():f} × {b.part.name}" for b in v.bom_items.select_related("part") if b.part],
+                     "sugerido": rows,
+                     "avisos": [m for m in (v.cost_breakdown or {}).get("problemas", []) if "estimativa manual" not in m]})
+    return {"criado": created, "sku_base": p.sku_base, "nome": p.name, "alteracoes": log, "variantes": site,
+            "ficha": _url(base, "catalog:product_detail", p.pk)}
 
 
 # --- escrita: variantes e preço -------------------------------------------------

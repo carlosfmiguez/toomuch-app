@@ -601,3 +601,10 @@ html.dark .tm-chip-opt span { border-color: var(--color-base-700); }
 .tm-collections__new input { max-width: 360px; }
 .tm-tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 9px; border-radius: 999px; background: color-mix(in oklab, var(--color-primary-500) 14%, transparent); color: var(--color-primary-700); font-size: 11.5px; font-weight: 600; white-space: nowrap; }
 html.dark .tm-tag { color: var(--color-primary-300); }
+
+/* --- estimativa manual da peça --- */
+.tm-part__file--estimate { color: var(--tm-ink); }
+.tm-part__file--estimate .material-symbols-outlined { font-size: 18px; color: #8a5d05; }
+.tm-partform { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.tm-partform .tm-field { width: 150px; }
+.tm-partform .tm-field--grow { flex: 1 1 160px; width: auto; }

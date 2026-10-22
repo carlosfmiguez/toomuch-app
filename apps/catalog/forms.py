@@ -93,8 +93,12 @@ class ProductDataForm(CollectionsMixin):
 class PartForm(forms.ModelForm):
     class Meta:
         model = Part
-        fields = ("name", "default_qty", "color_slot")
-        labels = {"default_qty": "qtd."}
+        fields = ("name", "default_qty", "color_slot", "only_sizes", "est_grams", "est_minutes")
+        labels = {"default_qty": "qtd.", "only_sizes": "só nos tamanhos", "est_grams": "gramas estimadas",
+                  "est_minutes": "tempo estimado (min)"}
+        widgets = {"only_sizes": forms.TextInput(attrs={"placeholder": "todos"}),
+                   "est_grams": forms.NumberInput(attrs={"step": "0.1", "min": "0"}),
+                   "est_minutes": forms.NumberInput(attrs={"min": "0"})}
 
 
 class PartFileForm(forms.Form):

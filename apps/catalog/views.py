@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
 
+from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -232,11 +233,16 @@ def part_add(request, pk):
 @require_POST
 def part_update(request, pk):
     part = get_object_or_404(Part, pk=pk)
-    form = PartForm(request.POST, instance=part, prefix=f"p{part.pk}")
+    # cada formulário da tela mostra só alguns campos: altera apenas os que vieram no envio
+    sent = [f for f in PartForm.Meta.fields if f"p{part.pk}-{f}" in request.POST]
+    form = forms.modelform_factory(Part, form=PartForm, fields=sent or PartForm.Meta.fields)(
+        request.POST, instance=part, prefix=f"p{part.pk}")
     if form.is_valid():
         form.save()
         if "default_qty" in form.changed_data:
             part.bom_items.update(quantity=part.default_qty)
+        if "only_sizes" in form.changed_data:
+            workflow.sync_bom_with_parts(part.product)
         workflow.refresh_product(part.product)
         messages.success(request, f"Peça “{part.name}” salva.")
     else:

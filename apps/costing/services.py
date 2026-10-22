@@ -48,9 +48,12 @@ def build_cost_input(variant: Variant, printer: Printer | None = None, params: G
 
         part = item.part
         asset = part.production_asset(printer)
-        if asset is None:
+        if asset is None and not part.has_estimate:
             problems.append(CostProblem(f"Peça '{part.name}' sem 3MF fatiado de produção."))
             continue
+        if asset is None:
+            problems.append(CostProblem(
+                f"Peça '{part.name}': custo pela estimativa manual ({part.est_label}). Suba o 3MF para confirmar."))
         filament = variant.filament_for_slot(item.effective_slot)
         if filament is None:
             problems.append(CostProblem(f"Peça '{part.name}': nenhum filamento mapeado para o slot."))
@@ -58,7 +61,10 @@ def build_cost_input(variant: Variant, printer: Printer | None = None, params: G
         if filament.avg_cost_per_g <= 0:
             problems.append(CostProblem(f"Filamento '{filament}' sem custo médio (registre uma compra)."))
 
-        grams = Decimal(asset.grams_total or 0)
+        if asset is not None:
+            grams, hours = Decimal(asset.grams_total or 0), asset.print_hours
+        else:
+            grams, hours = Decimal(part.est_grams), Decimal(part.est_minutes or 0) / Decimal(60)
         if not grams:
             problems.append(CostProblem(f"3MF da peça '{part.name}' sem gramas lidas."))
         inp.filaments.append(engine.FilamentUse(
@@ -66,11 +72,11 @@ def build_cost_input(variant: Variant, printer: Printer | None = None, params: G
             label=f"{part.name} ({filament})",
         ))
 
-        machine = asset.printer or printer or Printer.objects.filter(status=Printer.Status.ACTIVE).first()
+        machine = (asset.printer if asset else None) or printer or Printer.objects.filter(status=Printer.Status.ACTIVE).first()
         hourly = machine.hourly_cost(params) if machine else Decimal("0")
         if machine is None:
             problems.append(CostProblem("Nenhuma impressora ativa cadastrada para a hora-máquina."))
-        inp.machines.append(engine.MachineUse(asset.print_hours * qty, hourly, f"{part.name} em {machine or '—'}"))
+        inp.machines.append(engine.MachineUse(hours * qty, hourly, f"{part.name} em {machine or '—'}"))
         if part.failure_pct_override is not None:
             part_failure_pcts.append(part.failure_pct_override)
 

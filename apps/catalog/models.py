@@ -213,6 +213,15 @@ class Part(models.Model):
         help_text="Vazio usa o parâmetro global.",
     )
     notes = models.CharField("observações", max_length=200, blank=True)
+    only_sizes = models.CharField(
+        "só nos tamanhos", max_length=60, blank=True,
+        help_text="Vazio = entra em todas as variantes. Ex.: G ou P, M (peça própria de um tamanho).",
+    )
+    est_grams = models.DecimalField(
+        "gramas estimadas", max_digits=8, decimal_places=2, null=True, blank=True,
+        help_text="Usado no custo enquanto não há 3MF fatiado (ex.: valor da planilha antiga).",
+    )
+    est_minutes = models.PositiveIntegerField("tempo estimado (min)", null=True, blank=True)
 
     class Meta:
         verbose_name = "peça impressa"
@@ -224,6 +233,27 @@ class Part(models.Model):
 
     def production_assets(self):
         return self.assets.filter(kind=Asset.Kind.THREEMF_SLICED, is_production=True)
+
+    @property
+    def has_estimate(self) -> bool:
+        return bool(self.est_grams)
+
+    @property
+    def est_label(self) -> str:
+        """Ex.: '47 g / 1h41' (para avisos)."""
+        if not self.est_grams:
+            return ""
+        g = f"{self.est_grams.normalize():f}".replace(".", ",")
+        t = f" / {self.est_minutes // 60}h{self.est_minutes % 60:02d}" if self.est_minutes else ""
+        return f"{g} g{t}"
+
+    def size_list(self) -> list[str]:
+        return [s.strip().upper() for s in (self.only_sizes or "").replace(";", ",").split(",") if s.strip()]
+
+    def fits(self, variant) -> bool:
+        """A peça entra na composição desta variante? (restrição por tamanho)"""
+        sizes = self.size_list()
+        return not sizes or (variant.size or "").strip().upper() in sizes
 
     def production_asset(self, printer=None):
         """O 3MF fatiado de produção para a impressora dada (ou o único/primeiro)."""
@@ -301,6 +331,8 @@ class Variant(models.Model):
             return 0
         created = 0
         for part in self.product.all_parts():
+            if not part.fits(self):
+                continue
             BOMItem.objects.create(variant=self, kind=BOMItem.Kind.PART, part=part, quantity=Decimal(part.default_qty))
             created += 1
         return created
