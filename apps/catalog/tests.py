@@ -104,7 +104,7 @@ class ImporterTests(TestCase):
         self.assertEqual(vaso.origin, Product.Origin.LICENSED)
         self.assertEqual(vaso.license_author, "Designer X, licença comercial")
         self.assertEqual(vaso.status, Product.Status.DRAFT)
-        self.assertEqual(vaso.variants.count(), 1)
+        self.assertEqual(vaso.variants.count(), 0, "variante fica para a etapa 3, com filamento")
         self.assertEqual(vaso.assets.filter(kind=Asset.Kind.PHOTO).count(), 2)
         self.assertTrue(vaso.assets.filter(kind=Asset.Kind.PHOTO, is_main=True).exists())
         sol = Product.objects.get(sku_base="TM-LUM-SOL")

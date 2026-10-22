@@ -355,8 +355,7 @@ def _import_one(sp: ScannedProduct, row: dict, root: Path, user, default_categor
         report.created_products += 1
     else:
         report.reused_products += 1
-    if not product.variants.exists():
-        Variant.objects.create(product=product, sku=f"{sku_base}-U", size="Único", is_default=True)
+    # A variante não é criada aqui: ela precisa de filamento para ter custo (etapa 3 da ficha).
 
     existing_hashes = set(Asset.objects.filter(product=product).values_list("sha256", flat=True))
     for path in sp.files:
