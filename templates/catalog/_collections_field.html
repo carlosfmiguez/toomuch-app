@@ -1,0 +1,12 @@
+<fieldset class="tm-field tm-span-2 tm-collections{% if form.collections.errors %} has-error{% endif %}">
+  <legend>Coleções <span class="tm-muted tm-small">(opcional)</span></legend>
+  {% if form.collections.field.queryset.exists %}
+  <div class="tm-chips">
+    {% for cb in form.collections %}<label class="tm-chip-opt">{{ cb.tag }}<span>{{ cb.choice_label }}</span></label>{% endfor %}
+  </div>
+  {% endif %}
+  <div class="tm-collections__new">{{ form.new_collections }}</div>
+  <span class="tm-field__help">{% if form.collections.field.queryset.exists %}Marque a linha de design desta peça ou crie uma nova.{% else %}Nenhuma coleção ainda. Digite um nome para criar a primeira.{% endif %} Separe várias por vírgula. Peças de funções diferentes podem dividir a mesma coleção.</span>
+  {% for e in form.collections.errors %}<span class="tm-field__error">{{ e }}</span>{% endfor %}
+  {% for e in form.new_collections.errors %}<span class="tm-field__error">{{ e }}</span>{% endfor %}
+</fieldset>

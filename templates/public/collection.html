@@ -1,0 +1,14 @@
+{% extends "public/base_public.html" %}
+{% block title %}Coleção {{ collection.name }} · Toomuch{% endblock %}
+{% block description %}{{ collection.description|default:collection.name|truncatechars:160 }}{% endblock %}
+{% block content %}
+<div class="wrap">
+  <section style="padding:16px 0 64px">
+    <div class="eyebrow" style="margin-bottom:10px"><a href="{% url 'public:home' %}" style="text-decoration:none">Início</a> &nbsp;/&nbsp; Coleções &nbsp;/&nbsp; {{ collection.name }}</div>
+    <h1 style="font-size:clamp(36px,6vw,56px);margin-bottom:14px">{{ collection.name }}</h1>
+    {% if collection.description %}<p class="muted" style="margin:0 0 28px;max-width:640px;font-size:18px;text-wrap:pretty">{{ collection.description|linebreaksbr }}</p>{% else %}<div style="height:14px"></div>{% endif %}
+    <div class="ribbed" style="margin-bottom:32px"></div>
+    <div class="grid">{% for page in pages %}{% include "public/_card.html" %}{% empty %}<p class="muted">As peças desta coleção estão chegando. Fale com a gente pelo WhatsApp.</p>{% endfor %}</div>
+  </section>
+</div>
+{% endblock %}

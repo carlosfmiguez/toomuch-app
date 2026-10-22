@@ -29,6 +29,21 @@
 </section>
 
 <div class="wrap">
+  {% if collection_tiles %}
+  <section style="padding:56px 0 8px">
+    <div class="eyebrow" style="margin-bottom:8px">Linhas de design</div>
+    <h2 style="font-size:34px;margin-bottom:24px">Coleções</h2>
+    <div class="grid">
+      {% for t in collection_tiles %}
+      <a class="card" href="{% url 'public:collection' t.collection.slug %}">
+        {% if t.photo and t.photo.thumbnail %}<img src="{{ t.photo.thumbnail.url }}" alt="" loading="lazy" style="aspect-ratio:1/1">{% else %}<div class="ph" style="aspect-ratio:1/1"></div>{% endif %}
+        <div class="n">{{ t.collection.name }}</div>
+        <div class="p">{{ t.count }} peça{{ t.count|pluralize }}</div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
   {% for category, pages in by_category %}
   <section style="padding:56px 0 8px">
     <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:24px">

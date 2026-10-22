@@ -108,7 +108,7 @@
   {% if page.photo and page.photo.thumbnail %}<img class="abs hero" src="{{ page.photo.thumbnail.url }}" alt="">{% else %}<div class="abs hero-empty">Foto · a produzir</div>{% endif %}
   <div class="abs col">
     <div>
-      <div class="caps oliva">{{ page.product.category.name }}{% if page.product.origin == "own" %} · design autoral{% endif %}</div>
+      <div class="caps oliva">{{ page.product.category.name }}{% for c in page.product.collections.all %}{% if c.show_on_site %} · coleção {{ c.name }}{% endif %}{% endfor %}{% if page.product.origin == "own" %} · design autoral{% endif %}</div>
       <h1 class="name" style="margin-top:2.6mm">{{ page.product.name }}</h1>
       <p class="tagline">{{ page.product.short_description }}</p>
     </div>

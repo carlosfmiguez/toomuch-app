@@ -16,8 +16,9 @@
   <form method="get" class="tm-filters">
     <label class="tm-search"><span class="material-symbols-outlined">search</span><input type="search" name="q" value="{{ q }}" placeholder="Buscar por nome ou SKU"></label>
     <select class="tm-select tm-select--auto" name="categoria" onchange="this.form.submit()"><option value="">Todas as categorias</option>{% for c in categories %}<option value="{{ c.code }}" {% if c.code == category %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+    {% if collections %}<select class="tm-select tm-select--auto" name="colecao" onchange="this.form.submit()"><option value="">Todas as coleções</option>{% for c in collections %}<option value="{{ c.slug }}" {% if c.slug == collection %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>{% endif %}
     <select class="tm-select tm-select--auto" name="status" onchange="this.form.submit()"><option value="">Todos os status</option>{% for v, n in statuses %}<option value="{{ v }}" {% if v == status %}selected{% endif %}>{{ n }}</option>{% endfor %}</select>
-    {% if q or status or category %}<a class="tm-btn tm-btn--ghost tm-btn--sm" href="{% url 'catalog:product_list' %}">Limpar</a>{% endif %}
+    {% if q or status or category or collection %}<a class="tm-btn tm-btn--ghost tm-btn--sm" href="{% url 'catalog:product_list' %}">Limpar</a>{% endif %}
   </form>
 
   <div class="tm-plist">
@@ -29,7 +30,7 @@
           <span class="tm-pcard__name">{{ row.obj.name }}</span>
           <span class="tm-pill{% if row.obj.status == 'active' %} tm-pill--ok{% elif row.obj.status == 'seasonal' %} tm-pill--info{% endif %}">{{ row.obj.get_status_display }}</span>
         </div>
-        <div class="tm-small tm-muted"><span class="tm-mono">{{ row.obj.sku_base }}</span> · {{ row.obj.category }} · {{ row.variants }} variante{{ row.variants|pluralize }}{% if row.price_min %} · site a partir de R$ {{ row.price_min|brl }}{% endif %}</div>
+        <div class="tm-small tm-muted"><span class="tm-mono">{{ row.obj.sku_base }}</span> · {{ row.obj.category }} · {{ row.variants }} variante{{ row.variants|pluralize }}{% if row.price_min %} · site a partir de R$ {{ row.price_min|brl }}{% endif %}{% for c in row.obj.collections.all %} <span class="tm-tag">{{ c.name }}</span>{% endfor %}</div>
         <div class="tm-progress" title="{{ row.done }} de {{ row.total }} etapas">
           {% for s in row.steps %}<span class="tm-progress__seg{% if s.done %} is-done{% endif %}"></span>{% endfor %}
         </div>

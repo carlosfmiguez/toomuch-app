@@ -27,7 +27,7 @@ from .forms import (
     ComponentLineForm, PartFileForm, PartForm, ProductCreateForm, ProductDataForm, VariantCreateForm, VariantForm,
 )
 from .importer import suggest_sku
-from .models import Asset, BOMItem, Category, Part, Product, Variant
+from .models import Asset, BOMItem, Category, Collection, Part, Product, Variant
 from .services import parse_asset
 
 MODEL_KINDS = [Asset.Kind.THREEMF_SLICED, Asset.Kind.STL, Asset.Kind.STEP, Asset.Kind.F3D, Asset.Kind.THREEMF_PROJECT]
@@ -59,14 +59,17 @@ def _form_errors(request, form) -> None:
 
 @login_required
 def product_list(request):
-    qs = Product.objects.select_related("category").prefetch_related("variants", "parts")
+    qs = Product.objects.select_related("category").prefetch_related("variants", "parts", "collections")
     status = request.GET.get("status")
     category = request.GET.get("categoria")
+    collection = request.GET.get("colecao")
     q = request.GET.get("q", "").strip()
     if status:
         qs = qs.filter(status=status)
     if category:
         qs = qs.filter(category__code=category)
+    if collection:
+        qs = qs.filter(collections__slug=collection).distinct()
     if q:
         qs = qs.filter(name__icontains=q) | qs.filter(sku_base__icontains=q)
     products = []
@@ -87,6 +90,7 @@ def product_list(request):
         **shell(request, "Produtos"),
         "products": products, "categories": Category.objects.all(), "statuses": Product.Status.choices,
         "q": q, "status": status, "category": category,
+        "collections": Collection.objects.all(), "collection": collection,
     })
 
 

@@ -23,7 +23,7 @@ from django.db.models import Q
 from django.urls import reverse
 
 from apps.catalog import importer, workflow
-from apps.catalog.models import Asset, BOMItem, Category, Color, Component, Part, Product, Variant
+from apps.catalog.models import Asset, BOMItem, Category, Collection, Color, Component, Part, Product, Variant
 from apps.costing.models import Channel, GlobalParams, Printer
 from apps.costing.services import approve_price, latest_prices
 from apps.inventory.models import FilamentSKU, Purchase
@@ -125,6 +125,20 @@ def _category(ref) -> Category:
     return c
 
 
+def _collection(ref) -> Collection:
+    q = str(ref).strip()
+    c = Collection.objects.filter(Q(name__iexact=q) | Q(slug__iexact=q)).first() or (Collection.objects.filter(pk=q).first() if q.isdigit() else None)
+    if c is None:
+        raise ToolError(f"Coleção não encontrada: {q}. Opções: " + (", ".join(c.name for c in Collection.objects.all()) or "nenhuma ainda"))
+    return c
+
+
+def _collection_info(c: Collection, base: str) -> dict:
+    return {"id": c.pk, "nome": c.name, "slug": c.slug, "descricao": c.description, "mostrar_no_portal": c.show_on_site,
+            "ordem": c.order, "produtos": [p.sku_base for p in c.products.order_by("name")],
+            "portal": base + reverse("public:collection", args=[c.slug])}
+
+
 def _url(request_base: str, name: str, *args) -> str:
     return request_base + reverse(name, args=args)
 
@@ -156,7 +170,8 @@ def _variant_info(v: Variant) -> dict:
 def _product_info(p: Product, base: str, full: bool = True) -> dict:
     steps = workflow.steps_for(p)
     info = {
-        "sku_base": p.sku_base, "nome": p.name, "categoria": p.category.name, "status": p.get_status_display(),
+        "sku_base": p.sku_base, "nome": p.name, "categoria": p.category.name,
+        "colecoes": [c.name for c in p.collections.all()], "status": p.get_status_display(),
         "origem": p.get_origin_display(), "licenca_valida": p.license_is_valid,
         "pronto_para_catalogo": p.ready_for_catalog,
         "etapas": {s.title: ("feito" if s.done else "pendente: " + "; ".join(s.todo)) for s in steps},
@@ -204,14 +219,17 @@ def resumo(user, base):
     }
 
 
-@tool("listar_produtos", "Lista produtos com status, categoria, etapas concluídas e o próximo passo. Filtros opcionais.", {
+@tool("listar_produtos", "Lista produtos com status, categoria, coleções, etapas concluídas e o próximo passo. Filtros opcionais.", {
     "busca": {**S, "description": "parte do nome ou SKU"},
     "categoria": {**S, "description": "código (NAT, BAN...) ou nome"},
+    "colecao": {**S, "description": "nome ou slug da coleção"},
     "status": {"type": "string", "enum": ["draft", "active", "seasonal", "discontinued"]},
     "limite": {**I, "description": "padrão 100"},
 }, readonly=True)
-def listar_produtos(user, base, busca="", categoria="", status="", limite=100):
-    qs = Product.objects.select_related("category").order_by("name")
+def listar_produtos(user, base, busca="", categoria="", status="", limite=100, colecao=""):
+    qs = Product.objects.select_related("category").prefetch_related("collections").order_by("name")
+    if colecao:
+        qs = qs.filter(collections=_collection(colecao))
     if busca:
         qs = qs.filter(Q(name__icontains=busca) | Q(sku_base__icontains=busca))
     if categoria:
@@ -222,7 +240,8 @@ def listar_produtos(user, base, busca="", categoria="", status="", limite=100):
     for p in qs[: int(limite or 100)]:
         steps = workflow.steps_for(p)
         nxt = workflow.next_step(steps)
-        out.append({"sku_base": p.sku_base, "nome": p.name, "categoria": p.category.code, "status": p.status,
+        out.append({"sku_base": p.sku_base, "nome": p.name, "categoria": p.category.code,
+                    "colecoes": [c.name for c in p.collections.all()], "status": p.status,
                     "etapas_feitas": f"{sum(s.done for s in steps)}/{len(steps)}",
                     "proximo_passo": f"{nxt.title}: {'; '.join(nxt.todo[:2])}" if nxt else "pronto",
                     "variantes": p.variants.count()})
@@ -236,7 +255,7 @@ def ver_produto(user, base, produto):
     return _product_info(_product(produto), base)
 
 
-@tool("listar_cadastros", "Categorias, cores, canais de venda (com taxas e margens), impressoras e componentes/embalagens cadastrados.", readonly=True)
+@tool("listar_cadastros", "Categorias, coleções (linhas de design), cores, canais de venda (com taxas e margens), impressoras e componentes/embalagens cadastrados.", readonly=True)
 def listar_cadastros(user, base):
     chans = []
     for c in Channel.objects.all():
@@ -246,6 +265,8 @@ def listar_cadastros(user, base):
                       "margem_minima_pct": str(fee.min_margin_pct) if fee else None})
     return {
         "categorias": [{"codigo": c.code, "nome": c.name} for c in Category.objects.all()],
+        "colecoes": [{"nome": c.name, "slug": c.slug, "produtos": c.products.count(), "mostrar_no_portal": c.show_on_site}
+                     for c in Collection.objects.all()],
         "cores": [{"codigo": c.code, "nome": c.name, "hex": c.hex} for c in Color.objects.all()],
         "canais": chans,
         "impressoras": [{"nome": p.name, "modelo": p.model, "status": p.status, "custo_hora": str(p.hourly_cost())} for p in Printer.objects.all()],
@@ -286,6 +307,8 @@ PRODUCT_PROPS = {
     "origem": {"type": "string", "enum": ["autoral", "licenciado", "sem_licenca"]},
     "licenca_autor": S, "licenca_link": S, "licenca_termos": S, "licenca_custo_por_unidade": N,
     "licenca_exige_atribuicao": B, "categoria": S,
+    "colecoes": {"type": "array", "items": S,
+                 "description": "Nomes das coleções (linha de design). Substitui as atuais; [] remove todas. Coleção que não existe é criada."},
 }
 
 
@@ -307,6 +330,55 @@ def _apply_product_fields(p: Product, data: dict) -> list[str]:
     return changed
 
 
+def _set_collections(p: Product, data: dict) -> bool:
+    names = data.get("colecoes")
+    if names is None:
+        return False
+    if isinstance(names, str):
+        names = [n for n in names.split(",")]
+    p.collections.set([Collection.get_or_create_by_name(n) for n in names if str(n).strip()])
+    return True
+
+
+@tool("gerenciar_colecao", "Cria, altera ou exclui uma coleção (linha de design que agrupa peças de categorias diferentes no portal e nos filtros). 'produtos' define a lista de SKUs da coleção.", {
+    "acao": {"type": "string", "enum": ["criar", "atualizar", "excluir", "ver"]},
+    "colecao": {**S, "description": "nome ou slug (para criar: o nome)"},
+    "novo_nome": S, "descricao": S, "mostrar_no_portal": B, "ordem": I,
+    "produtos": {"type": "array", "items": S, "description": "SKUs-base; substitui a lista atual"},
+    "adicionar_produtos": {"type": "array", "items": S, "description": "SKUs-base para incluir sem tirar os atuais"},
+}, ["acao", "colecao"])
+def gerenciar_colecao(user, base, acao, colecao, novo_nome="", descricao=None, mostrar_no_portal=None, ordem=None,
+                      produtos=None, adicionar_produtos=None):
+    if acao == "criar":
+        name = " ".join(str(colecao).split())
+        if Collection.objects.filter(name__iexact=name).exists():
+            raise ToolError(f"Já existe a coleção {name}. Use acao=atualizar.")
+        c = Collection(name=name)
+    else:
+        c = _collection(colecao)
+    if acao == "ver":
+        return _collection_info(c, base)
+    if acao == "excluir":
+        info = _collection_info(c, base)
+        c.delete()
+        return {"excluida": info["nome"], "produtos_desvinculados": info["produtos"]}
+    if novo_nome:
+        c.name = " ".join(novo_nome.split())
+    if descricao is not None:
+        c.description = descricao
+    if mostrar_no_portal is not None:
+        c.show_on_site = bool(mostrar_no_portal)
+    if ordem is not None:
+        c.order = int(ordem)
+    with transaction.atomic():
+        c.save()
+        if produtos is not None:
+            c.products.set([_product(s) for s in produtos])
+        if adicionar_produtos:
+            c.products.add(*[_product(s) for s in adicionar_produtos])
+    return _collection_info(c, base)
+
+
 @tool("criar_produto", "Cria um produto em rascunho (com uma peça 'Peça única'). SKU-base gerado se omitido (TM-CAT-XXX).", {
     **PRODUCT_PROPS, "sku_base": S,
 }, ["nome", "categoria"])
@@ -322,15 +394,18 @@ def criar_produto(user, base, nome, categoria, sku_base="", **data):
         _apply_product_fields(p, data)
         p.save()
         Part.objects.create(product=p, name="Peça única")
+        _set_collections(p, data)
     return {"criado": True, **_product_info(p, base, full=False)}
 
 
-@tool("atualizar_produto", "Altera dados do produto (textos, medidas, categoria, origem e licença).", {
+@tool("atualizar_produto", "Altera dados do produto (textos, medidas, categoria, coleções, origem e licença).", {
     "produto": S, **PRODUCT_PROPS,
 }, ["produto"])
 def atualizar_produto(user, base, produto, **data):
     p = _product(produto)
     changed = _apply_product_fields(p, data)
+    if _set_collections(p, data):
+        changed.append("colecoes")
     if not changed:
         raise ToolError("Nada para alterar.")
     p.save()

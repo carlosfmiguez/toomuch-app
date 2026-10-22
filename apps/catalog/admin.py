@@ -4,7 +4,7 @@ from django.shortcuts import redirect
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin, TabularInline
 
-from .models import Asset, BOMItem, Category, Color, Component, Part, Product, Variant
+from .models import Asset, BOMItem, Category, Collection, Color, Component, Part, Product, Variant
 from .services import parse_asset
 
 MODEL_KINDS = (Asset.Kind.THREEMF_SLICED, Asset.Kind.THREEMF_PROJECT, Asset.Kind.STL, Asset.Kind.STEP, Asset.Kind.F3D)
@@ -15,6 +15,46 @@ MEDIA_KINDS = (Asset.Kind.PHOTO, Asset.Kind.RENDER, Asset.Kind.PDF, Asset.Kind.O
 class CategoryAdmin(ModelAdmin):
     list_display = ("name", "code", "order")
     ordering = ("order",)
+
+
+class CollectionAdminForm(forms.ModelForm):
+    products = forms.ModelMultipleChoiceField(
+        label="produtos", required=False, queryset=Product.objects.select_related("category").order_by("name"),
+        widget=admin.widgets.FilteredSelectMultiple("produtos", is_stacked=False),
+        help_text="Peças desta linha de design, de qualquer categoria.",
+    )
+
+    class Meta:
+        model = Collection
+        fields = ("name", "slug", "description", "show_on_site", "order")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            self.fields["products"].initial = self.instance.products.all()
+
+
+@admin.register(Collection)
+class CollectionAdmin(ModelAdmin):
+    form = CollectionAdminForm
+    list_display = ("name", "product_count", "show_on_site", "order", "public_link")
+    list_editable = ("show_on_site", "order")
+    search_fields = ("name", "description")
+    ordering = ("order", "name")
+
+    @admin.display(description="produtos")
+    def product_count(self, obj):
+        return obj.products.count()
+
+    @admin.display(description="portal")
+    def public_link(self, obj):
+        from django.urls import reverse
+
+        return format_html('<a href="{}" target="_blank">/colecao/{}/</a>', reverse("public:collection", args=[obj.slug]), obj.slug)
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        form.instance.products.set(form.cleaned_data.get("products") or [])
 
 
 @admin.register(Color)
@@ -123,11 +163,12 @@ class AssetInline(TabularInline):
 @admin.register(Product)
 class ProductAdmin(ModelAdmin):
     list_display = ("name", "sku_base", "category", "status", "origin", "ready", "updated_at")
-    list_filter = ("status", "category", "origin")
+    list_filter = ("status", "category", "collections", "origin")
+    filter_horizontal = ("collections",)
     search_fields = ("name", "sku_base", "tags")
     inlines = [PartInline, PartFileInline, VariantInline, AssetInline]
     fieldsets = (
-        (None, {"fields": ("name", "sku_base", "category", "status", "short_description", "long_description", "tags")}),
+        (None, {"fields": ("name", "sku_base", "category", "collections", "status", "short_description", "long_description", "tags")}),
         ("Medidas e prazo", {"fields": (("height_mm", "width_mm", "depth_mm"), "weight_g", "lead_time_days")}),
         ("Origem e licença", {"fields": (
             "origin", "license_author", "license_url", "license_terms", "license_cost_per_unit",

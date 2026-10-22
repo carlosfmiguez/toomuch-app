@@ -7,7 +7,7 @@ from django import forms
 from apps.costing.models import Printer
 from apps.inventory.models import FilamentSKU
 
-from .models import BOMItem, Color, Component, Part, Product, Variant
+from .models import BOMItem, Collection, Color, Component, Part, Product, Variant
 
 
 class FilamentChoiceField(forms.ModelChoiceField):
@@ -42,11 +42,44 @@ class ProductCreateForm(forms.ModelForm):
         return sku
 
 
-class ProductDataForm(forms.ModelForm):
+class CollectionsMixin(forms.ModelForm):
+    """Coleções existentes (caixas de marcar) + campo para criar novas na hora."""
+
+    new_collections = forms.CharField(
+        label="nova coleção", required=False, max_length=200,
+        help_text="Digite para criar e já incluir; separe várias por vírgula.",
+        widget=forms.TextInput(attrs={"placeholder": "Ex.: Linha Taylor"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "collections" in self.fields:
+            self.fields["collections"].widget = forms.CheckboxSelectMultiple(attrs={"class": "tm-chipcheck"})
+            self.fields["collections"].queryset = Collection.objects.all()
+            self.fields["collections"].help_text = "Linha de design que agrupa peças de funções diferentes no portal e nos filtros."
+
+    def save(self, commit=True):
+        obj = super().save(commit=commit)
+        names = [n.strip() for n in (self.cleaned_data.get("new_collections") or "").split(",") if n.strip()]
+        if names:
+            extra = [Collection.get_or_create_by_name(n) for n in names]
+            if commit:
+                obj.collections.add(*extra)
+            else:
+                old = self.save_m2m
+
+                def save_m2m():
+                    old()
+                    obj.collections.add(*extra)
+                self.save_m2m = save_m2m
+        return obj
+
+
+class ProductDataForm(CollectionsMixin):
     class Meta:
         model = Product
         fields = (
-            "name", "sku_base", "category", "short_description", "long_description", "tags",
+            "name", "sku_base", "category", "collections", "short_description", "long_description", "tags",
             "height_mm", "width_mm", "depth_mm", "weight_g", "lead_time_days",
             "origin", "license_author", "license_url", "license_terms", "license_cost_per_unit",
             "license_valid_until", "license_attribution_required",

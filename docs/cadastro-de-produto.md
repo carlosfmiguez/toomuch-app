@@ -31,6 +31,22 @@ que muda o custo é salvo — não existe mais botão "Recalcular" obrigatório.
 5. **Fotos**: escolha uma ou várias e **Enviar fotos**. A primeira vira a principal; a estrela troca.
 6. **Publicar**: **Ativar produto**. Com tudo verde ele entra no catálogo em PDF, na loja e no envio ao Tiny.
 
+### Coleções (linha de design)
+
+A coleção agrupa peças de funções e categorias diferentes que dividem o mesmo desenho, por exemplo a
+**Linha Taylor**: vaso, porta-maquiagem e luminária. Uma peça pode estar em mais de uma coleção
+(Linha Taylor e Natal 2026).
+
+- **Na ficha, etapa Dados**: marque as coleções do produto ou digite o nome em "nova coleção" para criar
+  e já incluir. Separe várias por vírgula.
+- **No menu Coleções**: nome, descrição (aparece no portal), "mostrar no portal", ordem e a lista de produtos,
+  para montar a coleção inteira de uma vez.
+- **Filtro**: em Produtos, "Todas as coleções".
+- **Portal**: cada coleção visível tem página própria (`/loja/colecao/linha-taylor/`) e aparece em "Coleções"
+  na home. A página da categoria ganha filtro por coleção, e a página do produto mostra "Da coleção…" com as
+  outras peças da linha. Desmarque "mostrar no portal" para usar a coleção só como agrupador interno.
+- **Importação em lote**: coluna opcional `Coleção` no `produtos.csv` (várias separadas por `|`).
+
 O admin continua disponível em **Cadastros avançados** e no link "Abrir no modo avançado" da ficha; ao salvar lá,
 o custo é recalculado e você volta para a ficha.
 

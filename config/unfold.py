@@ -81,6 +81,7 @@ UNFOLD = {
                 "items": [
                     {"title": _("Painel"), "icon": "space_dashboard", "link": reverse_lazy("admin:index"), "badge": "config.unfold.badge_pendencias"},
                     {"title": _("Produtos"), "icon": "deployed_code", "link": reverse_lazy("catalog:product_list")},
+                    {"title": _("Coleções"), "icon": "collections_bookmark", "link": reverse_lazy("admin:catalog_collection_changelist")},
                     {"title": _("Aprovar preços"), "icon": "price_check", "link": reverse_lazy("costing:approvals"), "badge": "config.unfold.badge_aprovacoes"},
                     {"title": _("Produção"), "icon": "precision_manufacturing", "link": reverse_lazy("production:board"), "badge": "config.unfold.badge_producao"},
                     {"title": _("Catálogo PDF e anúncios"), "icon": "menu_book", "link": reverse_lazy("publishing:catalog_index")},

@@ -15,7 +15,8 @@ Também funciona sem planilha (``apply(pasta)``), usando as sugestões do scan.
 
 Manifesto opcional: um ``produtos.csv`` na raiz do ZIP/pasta (separado por ``;`` ou ``,``)
 com as colunas ``Pasta; Nome; Categoria; SKU-base; Origem; Autor; Link; Termos;
-Descrição curta; Atribuição``. Ele substitui as sugestões automáticas da pasta
+Descrição curta; Atribuição; Coleção`` (Coleção aceita várias separadas por ``|``;
+as que não existem são criadas). Ele substitui as sugestões automáticas da pasta
 correspondente, para a importação já chegar com nome, categoria e licença certos.
 """
 
@@ -75,6 +76,7 @@ class ScannedProduct:
     license_terms: str = ""
     short_description: str = ""
     attribution: bool = False
+    collections: list[str] = field(default_factory=list)
     note: str = ""
 
     @property
@@ -203,6 +205,8 @@ def _apply_manifest(root: Path, found: list[ScannedProduct]) -> None:
         sp.license_terms = row.get("Termos", "")
         sp.short_description = row.get("Descrição curta", "")
         sp.attribution = (row.get("Atribuição", "") or "").lower() in ("sim", "s", "yes", "1", "true")
+        raw = row.get("Coleção") or row.get("Coleções") or row.get("Colecao") or ""
+        sp.collections = [c.strip() for c in raw.replace(",", "|").split("|") if c.strip()]
 
 
 MAPPING_COLUMNS = ["Pasta", "Nome", "Categoria (código)", "SKU-base", "Origem", "Autor/licença", "Arquivos 3D", "Fotos", "Outros", "Observação", "Importar?"]
@@ -355,6 +359,10 @@ def _import_one(sp: ScannedProduct, row: dict, root: Path, user, default_categor
         report.created_products += 1
     else:
         report.reused_products += 1
+    if sp.collections:
+        from .models import Collection
+
+        product.collections.add(*[Collection.get_or_create_by_name(c) for c in sp.collections])
     # A variante não é criada aqui: ela precisa de filamento para ter custo (etapa 3 da ficha).
 
     existing_hashes = set(Asset.objects.filter(product=product).values_list("sha256", flat=True))

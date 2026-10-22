@@ -43,7 +43,7 @@
 
     <div style="flex:1 1 340px;min-width:0;max-width:520px;display:flex;flex-direction:column;gap:22px">
       <div>
-        <div class="eyebrow">{{ page.product.category.name }}{% if page.product.origin == 'own' %} · design autoral{% endif %}</div>
+        <div class="eyebrow">{{ page.product.category.name }}{% for c in collections %} · <a href="{% url 'public:collection' c.slug %}" style="text-decoration:none">coleção {{ c.name }}</a>{% endfor %}{% if page.product.origin == 'own' %} · design autoral{% endif %}</div>
         <h1 style="font-size:clamp(40px,6vw,60px);margin-top:8px;font-variation-settings:'SOFT' 100,'opsz' 72">{{ page.product.name }}</h1>
         {% if page.product.short_description %}<p class="muted" style="margin:8px 0 0;text-wrap:pretty">{{ page.product.short_description }}</p>{% endif %}
       </div>
@@ -79,7 +79,10 @@
 {% if related %}
 <div class="wrap">
   <section style="padding:0 0 64px">
-    <h2 style="font-size:34px;margin-bottom:24px">Você também vai gostar</h2>
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:24px">
+      <h2 style="font-size:34px">{{ related_title }}</h2>
+      {% if collections|length == 1 and related_title != "Você também vai gostar" %}<a href="{% url 'public:collection' collections.0.slug %}" style="font-size:14px;font-weight:600">Ver a coleção</a>{% endif %}
+    </div>
     <div class="grid">{% for page in related %}{% include "public/_card.html" %}{% endfor %}</div>
   </section>
 </div>

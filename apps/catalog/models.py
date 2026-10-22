@@ -46,6 +46,47 @@ class Color(models.Model):
         return f"{self.name} ({self.code})"
 
 
+class Collection(models.Model):
+    """
+    Linha de design que agrupa peças de funções e categorias diferentes
+    (ex.: Linha Taylor = vaso + porta-maquiagem + luminária). Serve de filtro
+    no sistema e de página/agrupador no portal público.
+    """
+
+    name = models.CharField("nome", max_length=80, unique=True)
+    slug = models.SlugField("endereço no portal", max_length=80, unique=True, blank=True,
+                            help_text="Gerado do nome se ficar em branco (ex.: linha-taylor).")
+    description = models.TextField("descrição", blank=True, help_text="Aparece no topo da página da coleção no portal.")
+    show_on_site = models.BooleanField("mostrar no portal", default=True)
+    order = models.PositiveSmallIntegerField("ordem", default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "coleção"
+        verbose_name_plural = "coleções"
+        ordering = ["order", "name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+
+            base = slugify(self.name)[:70] or "colecao"
+            slug, n = base, 2
+            while Collection.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug, n = f"{base}-{n}", n + 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_or_create_by_name(cls, name: str) -> "Collection":
+        name = " ".join((name or "").split())
+        found = cls.objects.filter(name__iexact=name).first()
+        return found or cls.objects.create(name=name)
+
+
 class Product(models.Model):
     class Status(models.TextChoices):
         DRAFT = "draft", "Rascunho"
@@ -61,6 +102,10 @@ class Product(models.Model):
     sku_base = models.CharField("SKU-base", max_length=40, unique=True, help_text="Ex.: TM-LUM-SOL")
     name = models.CharField("nome", max_length=120)
     category = models.ForeignKey(Category, verbose_name="categoria", on_delete=models.PROTECT, related_name="products")
+    collections = models.ManyToManyField(
+        Collection, verbose_name="coleções", blank=True, related_name="products",
+        help_text="Linha de design. Uma peça pode estar em mais de uma (ex.: Linha Taylor e Natal 2026).",
+    )
     short_description = models.CharField("descrição curta", max_length=200, blank=True)
     long_description = models.TextField("descrição longa", blank=True)
     tags = models.CharField("tags SEO", max_length=300, blank=True, help_text="separadas por vírgula")
