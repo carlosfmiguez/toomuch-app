@@ -20,7 +20,9 @@ lista de preço e calculadora rápida.
 | Loja pública | `/loja/` sem login: home por categoria, página de categoria e página de produto no modelo desenhado (a luminária acende ao passar o mouse, swatches de cor, botão de WhatsApp com mensagem pronta); só produtos com checklist completo e preço do canal Site |
 | Importação em lote | Tela **Produtos → Importar em lote** (ZIP ou pasta no servidor) com revisão de nome, categoria, SKU e origem antes de criar; ou `manage.py import_folder` com planilha de mapeamento XLSX; idempotente por hash |
 
-Ainda não existe: integração Tiny e Bambu ao vivo (E7/E8), perfis de permissão.
+| Tiny ERP (E7) | Tela **Tiny** no menu: cadastro do aplicativo (Client ID/Secret), conexão OAuth 2 com renovação automática do token (4 h) e do refresh (1 dia), **envio de produtos** prontos para catálogo (cria ou atualiza pelo SKU, com preço do canal escolhido, medidas, peso, fotos e estoque pronto; só reenvia o que mudou) e **importação de pedidos** nas situações configuradas (padrão 3 = Aprovada) virando ordens de produção, uma vez por pedido; `manage.py tiny_sync` para agendar |
+
+Ainda não existe: Bambu ao vivo e relatórios (E8), perfis de permissão.
 
 ## Rodar em desenvolvimento
 
@@ -148,6 +150,18 @@ e o wordmark em `static/img/`. A geração usa o WeasyPrint, que precisa das bib
 (já presentes na imagem Docker; no Mac, `brew install pango`). As fotos vêm do `thumbnail` de cada `Asset` de
 tipo Foto (800 px), gerado no upload.
 
+## Tiny ERP
+
+1. No Tiny: *Configurações → Preferências gerais → Outras configurações → Aplicativos → + novo aplicativo*, com a
+   URL de redirecionamento mostrada na tela **Tiny** do sistema (`https://<domínio>/integracoes/tiny/callback/`)
+   e permissões de produtos, estoque e pedidos. Copie o Client ID e o Client Secret.
+2. Na tela **Tiny**: cole as credenciais, escolha o canal cujo preço vai ao Tiny (Site) e clique em **Conectar ao Tiny**.
+3. **Enviar produtos** manda as variantes prontas para catálogo; **Importar pedidos** cria ordens de produção para
+   pedidos aprovados dos últimos N dias. Para rodar sozinho, agende `python manage.py tiny_sync --base-url https://app.toomuch.art`
+   a cada 15 minutos (Render: *Cron Job*; Railway: serviço com cron).
+
+Referência da API: https://api-docs.erp.olist.com (v3, OAuth 2 em accounts.tiny.com.br).
+
 ## Estrutura
 
 ```
@@ -158,12 +172,12 @@ apps/costing       engine.py (fórmulas), parâmetros, impressoras, canais, pre�
 apps/production    ordem de produção, trabalho de impressão
 apps/publishing    publicações
 apps/files3d       leitores de 3MF/STL
+apps/integrations/tiny  cliente da API v3, OAuth, envio de produtos, pedidos → ordens, tela e comando
 apps/core          painel, seeds, testes de fluxo
 templates/         base com a identidade visual (gesso, chocolate, Fraunces + Manrope)
 ```
 
 ## Próximos passos (roadmap)
 
-- E7: Tiny ERP — envio de produtos, pedidos pagos virando ordens.
 - E8: status ao vivo das Bambu (MQTT em modo LAN) e relatórios de margem e giro.
 - Hospedagem em app.toomuch.art (VPS + Docker Compose + HTTPS) e backup diário.

@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     "apps.costing",
     "apps.production",
     "apps.publishing",
+    "apps.integrations.tiny",
 ]
 
 MIDDLEWARE = [

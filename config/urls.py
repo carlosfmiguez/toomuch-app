@@ -15,6 +15,7 @@ urlpatterns = [
     path("catalogo/", include("apps.publishing.urls")),
     path("producao/", include("apps.production.urls")),
     path("loja/", include("apps.publishing.urls_public")),
+    path("integracoes/tiny/", include("apps.integrations.tiny.urls")),
 ]
 
 # Arquivos enviados: servidos pelo Django quando ficam em disco (volume); com bucket S3/R2 o storage gera as URLs.
