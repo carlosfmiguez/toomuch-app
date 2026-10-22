@@ -1,0 +1,32 @@
+{% extends "shell.html" %}
+{% load tm %}
+{% block content %}
+<div class="tm-page">
+  <div class="tm-head">
+    <div>
+      <div class="tm-head__eyebrow">Custo e preço</div>
+      <h1 class="tm-head__title">Aprovar preços <small>{{ items|length }} variante{{ items|length|pluralize }}</small></h1>
+      <p class="tm-head__lead">Preços sugeridos que ainda não foram aprovados. Ajuste o valor se quiser (a margem recalcula na hora) e aprove. Só preço aprovado vai para o catálogo, a loja e o Tiny.</p>
+    </div>
+    <div class="tm-head__actions"><a class="tm-btn tm-btn--secondary" href="{% url 'costing:price_list' %}"><span class="material-symbols-outlined">sell</span>Lista de preço</a></div>
+  </div>
+
+  {% for it in items %}{% with v=it.variant %}
+  <article class="tm-card tm-variant">
+    <div class="tm-card__head">
+      <div class="tm-variant__id">
+        <div class="tm-variant__title">{% if v.primary_color.hex %}<span class="tm-swatch tm-swatch--lg" style="background:{{ v.primary_color.hex }}"></span>{% endif %}<a class="tm-link" href="{% url 'catalog:product_detail' v.product_id %}#v{{ v.pk }}">{{ v.product.name }}</a> <span class="tm-muted">· {{ v.size }}{% if v.primary_color %} · {{ v.primary_color.name }}{% endif %}</span></div>
+        <div class="tm-mono tm-muted">{{ v.sku }}</div>
+      </div>
+      <div class="tm-card__tools"><span class="tm-pill">custo R$ {{ v.cost_cached|brl }}</span></div>
+    </div>
+    <div class="tm-card__body">
+      {% include "costing/_price_form.html" with v=v prices=it.price_rows next_url=request.get_full_path all_approved=False %}
+    </div>
+  </article>
+  {% endwith %}{% empty %}
+  <div class="tm-card"><div class="tm-empty"><span class="material-symbols-outlined">task_alt</span>Nenhum preço esperando aprovação.</div></div>
+  {% endfor %}
+</div>
+{% include "catalog/_ficha_js.html" %}
+{% endblock %}

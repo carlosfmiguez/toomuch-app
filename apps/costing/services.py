@@ -128,6 +128,13 @@ def compute_prices(variant: Variant, params: GlobalParams | None = None, keep_cu
             current = previous.current_price
             approved_by, approved_at = previous.approved_by, previous.approved_at
         margin = engine.margin_at(current, cost, terms)
+        if (
+            previous and previous.cost_at == cost and previous.suggested_price == result.suggested
+            and previous.current_price == current and previous.approved_at == approved_at
+            and previous.margin_pct == margin
+        ):
+            rows.append(previous)  # nada mudou: não cria linha nova no histórico
+            continue
         rows.append(PriceByChannel.objects.create(
             variant=variant, channel=channel, cost_at=cost, suggested_price=result.suggested, current_price=current,
             margin_pct=margin, below_minimum=margin < fee.min_margin_pct, approved_by=approved_by, approved_at=approved_at,

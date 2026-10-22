@@ -5,10 +5,10 @@
     <div>
       <div class="tm-head__eyebrow">Custo e preço</div>
       <h1 class="tm-head__title">Lista de preço <small>{{ rows|length }} variante{{ rows|length|pluralize }}</small></h1>
-      <p class="tm-head__lead">Preço vigente por variante e canal; entre parênteses a margem líquida. Aprovação e sobrescrita em Preços por canal.</p>
+      <p class="tm-head__lead">Preço vigente por variante e canal; entre parênteses a margem líquida. Para aprovar ou mudar um preço, use Aprovar preços ou a ficha do produto.</p>
     </div>
     <div class="tm-head__actions">
-      <a class="tm-btn tm-btn--secondary" href="{% url 'admin:costing_pricebychannel_changelist' %}"><span class="material-symbols-outlined">price_check</span>Preços por canal</a>
+      <a class="tm-btn tm-btn--secondary" href="{% url 'costing:approvals' %}"><span class="material-symbols-outlined">price_check</span>Aprovar preços</a>
       <a class="tm-btn tm-btn--primary" href="{% url 'costing:calculator' %}"><span class="material-symbols-outlined">calculate</span>Calculadora</a>
     </div>
   </div>
@@ -20,7 +20,7 @@
         <tbody>
         {% for row in rows %}
         <tr>
-          <td><a href="{% url 'catalog:product_detail' row.variant.product_id %}">{{ row.variant.sku }}</a><div class="tm-muted tm-small">{{ row.variant.label }}</div></td>
+          <td><a href="{% url 'catalog:product_detail' row.variant.product_id %}#v{{ row.variant.pk }}">{{ row.variant.sku }}</a><div class="tm-muted tm-small">{{ row.variant.label }}</div></td>
           <td class="r">{% if row.variant.cost_cached is not None %}{{ row.variant.cost_cached }}{% else %}<span class="tm-muted">—</span>{% endif %}</td>
           {% for cell in row.cells %}
           <td class="r">{% if cell %}<strong>{{ cell.current_price }}</strong> <span class="tm-muted">({{ cell.margin_pct }}%)</span>{% if cell.below_minimum %} <span class="tm-pill tm-pill--warn">mín.</span>{% elif not cell.approved %} <span class="tm-pill">a aprovar</span>{% endif %}{% else %}<span class="tm-muted">—</span>{% endif %}</td>

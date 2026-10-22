@@ -1,0 +1,77 @@
+{% extends "shell.html" %}
+{% block content %}
+<div class="tm-page tm-narrow">
+  <div class="tm-head">
+    <div>
+      <div class="tm-head__eyebrow"><a class="tm-crumb" href="{% url 'catalog:product_list' %}">Produtos</a> / <a class="tm-crumb" href="{% url 'catalog:product_detail' product.pk %}#v{{ variant.pk }}">{{ product.name }}</a></div>
+      <h1 class="tm-head__title">Variante {{ variant.size }}{% if variant.primary_color %} · {{ variant.primary_color.name }}{% endif %}</h1>
+      <div class="tm-row tm-head__meta"><span class="tm-mono">{{ variant.sku }}</span>{% if variant.cost_cached is not None %}<span class="tm-pill">custo R$ {{ variant.cost_cached }}</span>{% endif %}</div>
+    </div>
+  </div>
+
+  <form method="post" class="tm-stack" id="variant-form">{% csrf_token %}
+    {% for e in form.non_field_errors %}<div class="tm-alert tm-alert--warn">{{ e }}</div>{% endfor %}
+    <section class="tm-card">
+      <div class="tm-card__head"><span class="material-symbols-outlined">palette</span><div><h2 class="tm-card__title">Tamanho, cores e filamentos</h2><p class="tm-card__sub">O filamento define o custo por grama de cada peça</p></div></div>
+      <div class="tm-card__body"><div class="tm-formgrid">
+        {% include "catalog/_field.html" with f=form.size %}
+        {% include "catalog/_field.html" with f=form.sku %}
+        {% include "catalog/_field.html" with f=form.primary_color %}
+        {% include "catalog/_field.html" with f=form.main_filament %}
+        {% if has_secondary or variant.secondary_filament %}
+        {% include "catalog/_field.html" with f=form.secondary_color %}
+        {% include "catalog/_field.html" with f=form.secondary_filament %}
+        {% endif %}
+      </div></div>
+    </section>
+
+    <section class="tm-card">
+      <div class="tm-card__head"><span class="material-symbols-outlined">view_in_ar</span><div><h2 class="tm-card__title">Peças impressas nesta variante</h2><p class="tm-card__sub">Vêm do produto; mude a quantidade se esta variante usa mais ou menos</p></div></div>
+      <div class="tm-card__body tm-card__body--flush">
+        <table class="tm-table">
+          <thead><tr><th>Peça</th><th>Cor</th><th class="r" style="width:120px">Quantidade</th></tr></thead>
+          <tbody>{% for b in parts %}<tr><td>{{ b.part.name }}</td><td class="tm-muted">{{ b.part.get_color_slot_display }}</td><td class="r"><input class="tm-input tm-input--num" type="text" inputmode="decimal" name="qty_{{ b.pk }}" value="{{ b.quantity|floatformat:'-2' }}"></td></tr>
+          {% empty %}<tr><td colspan="3" class="tm-muted">O produto ainda não tem peças.</td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="tm-card">
+      <div class="tm-card__head"><span class="material-symbols-outlined">schedule</span><div><h2 class="tm-card__title">Mão de obra e estoque</h2><p class="tm-card__sub">Minutos × custo/hora dos parâmetros globais</p></div></div>
+      <div class="tm-card__body"><div class="tm-formgrid tm-formgrid--4">
+        {% include "catalog/_field.html" with f=form.minutes_post %}
+        {% include "catalog/_field.html" with f=form.minutes_assembly %}
+        {% include "catalog/_field.html" with f=form.minutes_packaging %}
+        {% include "catalog/_field.html" with f=form.stock_ready %}
+        {% include "catalog/_field.html" with f=form.is_default span=2 %}
+      </div></div>
+    </section>
+  </form>
+
+  <section class="tm-card">
+    <div class="tm-card__head"><span class="material-symbols-outlined">inventory_2</span><div><h2 class="tm-card__title">Componentes comprados e embalagem</h2><p class="tm-card__sub">Kit elétrico, lâmpada, caixa, tag… Sem componente de embalagem vale a embalagem padrão dos parâmetros.</p></div></div>
+    <div class="tm-card__body tm-card__body--flush">
+      <table class="tm-table">
+        <tbody>
+        {% for b in components %}<tr><td>{{ b.component.name }}{% if b.component.is_packaging %} <span class="tm-pill">embalagem</span>{% endif %}</td><td class="r tm-muted">{{ b.quantity|floatformat:"-2" }} × R$ {{ b.component.unit_cost }}</td>
+          <td class="r" style="width:60px"><form method="post">{% csrf_token %}<button class="tm-btn tm-btn--ghost tm-btn--sm tm-btn--icon" name="action" value="remove_item:{{ b.pk }}" title="Remover"><span class="material-symbols-outlined">delete</span></button></form></td></tr>
+        {% empty %}<tr><td class="tm-muted" colspan="3">Nenhum componente.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <form method="post" class="tm-card__foot tm-addrow tm-addrow--foot">{% csrf_token %}
+      <label class="tm-field tm-field--grow">Componente{{ comp_form.component }}</label>
+      <label class="tm-field tm-field--xs">Qtd.{{ comp_form.quantity }}</label>
+      <button class="tm-btn tm-btn--secondary" name="action" value="add_component" type="submit">Adicionar</button>
+      <a class="tm-link tm-small" href="{% url 'admin:catalog_component_add' %}" target="_blank">cadastrar componente novo ↗</a>
+    </form>
+  </section>
+
+  <div class="tm-actionbar">
+    <form method="post" action="{% url 'catalog:variant_delete' variant.pk %}" onsubmit="return confirm('Remover a variante {{ variant.sku }}?')">{% csrf_token %}<button class="tm-btn tm-btn--ghost tm-btn--danger-text" type="submit"><span class="material-symbols-outlined">delete</span>Remover variante</button></form>
+    <span class="tm-spacer"></span>
+    <a class="tm-btn tm-btn--ghost" href="{% url 'catalog:product_detail' product.pk %}#v{{ variant.pk }}">Cancelar</a>
+    <button class="tm-btn tm-btn--primary" type="submit" form="variant-form" name="action" value="save"><span class="material-symbols-outlined">save</span>Salvar e recalcular</button>
+  </div>
+</div>
+{% endblock %}

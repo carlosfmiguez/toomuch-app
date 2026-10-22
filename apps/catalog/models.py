@@ -93,6 +93,11 @@ class Product(models.Model):
     def __str__(self) -> str:
         return f"{self.name} ({self.sku_base})"
 
+    def get_absolute_url(self) -> str:
+        from django.urls import reverse
+
+        return reverse("catalog:product_detail", args=[self.pk])
+
     # --- regras ---------------------------------------------------------
     @property
     def license_is_valid(self) -> bool:

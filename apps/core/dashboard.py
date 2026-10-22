@@ -35,11 +35,16 @@ def pending_items() -> list[dict]:
     for prod in products:
         for part in prod.parts.all():
             if not part.production_assets().exists():
-                items.append({"kind": "Peça sem 3MF fatiado", "label": f"{prod.name} · {part.name}", "url": reverse("admin:catalog_part_change", args=[part.pk])})
+                items.append({"kind": "Peça sem 3MF fatiado", "label": f"{prod.name} · {part.name}", "url": reverse("catalog:product_detail", args=[prod.pk]) + "#pecas"})
     for v in Variant.objects.filter(cost_cached__isnull=True, product__in=products).select_related("product"):
-        items.append({"kind": "Variante sem custo", "label": v.sku, "url": reverse("catalog:product_detail", args=[v.product_id])})
+        items.append({"kind": "Variante sem custo", "label": v.sku, "url": reverse("catalog:product_detail", args=[v.product_id]) + f"#v{v.pk}"})
     for prod in products.annotate(n=Count("assets", filter=Q(assets__kind=Asset.Kind.PHOTO))).filter(n=0):
-        items.append({"kind": "Produto sem foto", "label": prod.name, "url": reverse("catalog:product_detail", args=[prod.pk])})
+        items.append({"kind": "Produto sem foto", "label": prod.name, "url": reverse("catalog:product_detail", args=[prod.pk]) + "#fotos"})
+    from apps.catalog.workflow import pending_approvals
+
+    for it in pending_approvals():
+        v = it["variant"]
+        items.append({"kind": "Preço a aprovar", "label": f"{v.product.name} · {v.sku}", "url": reverse("costing:approvals")})
     return items
 
 

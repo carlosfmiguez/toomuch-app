@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib import admin, messages
+from django.shortcuts import redirect
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin, TabularInline
 
@@ -31,8 +32,19 @@ class ColorAdmin(ModelAdmin):
 class VariantInline(TabularInline):
     model = Variant
     extra = 0
-    fields = ("sku", "size", "primary_color", "secondary_color", "main_filament", "secondary_filament", "is_default", "cost_cached")
-    readonly_fields = ("cost_cached",)
+    fields = ("sku", "size", "primary_color", "secondary_color", "main_filament", "secondary_filament", "is_default", "cost_cached", "prices_now")
+    readonly_fields = ("cost_cached", "prices_now")
+
+    @admin.display(description="preços vigentes")
+    def prices_now(self, obj):
+        from apps.costing.services import latest_prices
+
+        if not obj.pk:
+            return "—"
+        rows = latest_prices(obj)
+        if not rows:
+            return "—"
+        return " · ".join(f"{r.channel.name} {r.current_price}{'' if r.approved else ' (a aprovar)'}" for r in rows)
     show_change_link = True
     autocomplete_fields = ("main_filament", "secondary_filament")
 
@@ -132,11 +144,26 @@ class ProductAdmin(ModelAdmin):
         return super().get_form(request, obj, **kwargs)
 
     def save_related(self, request, form, formsets, change):
+        from .workflow import refresh_product, sync_bom_with_parts
+
         super().save_related(request, form, formsets, change)
-        # Variante recém-criada sem composição: entra uma linha por peça do produto.
+        # Variante sem composição ganha uma linha por peça; peça nova entra nas variantes; custo e preço recalculados.
         n = sum(v.ensure_default_bom() for v in form.instance.variants.all())
+        sync_bom_with_parts(form.instance)
+        refresh_product(form.instance)
         if n:
             messages.info(request, f"Composição criada automaticamente com {n} peça(s); ajuste na variante se precisar.")
+
+    def _to_ficha(self, request, obj, response):
+        if "_continue" in request.POST or "_addanother" in request.POST or "_saveasnew" in request.POST:
+            return response
+        return redirect(obj.get_absolute_url())
+
+    def response_add(self, request, obj, post_url_continue=None):
+        return self._to_ficha(request, obj, super().response_add(request, obj, post_url_continue))
+
+    def response_change(self, request, obj):
+        return self._to_ficha(request, obj, super().response_change(request, obj))
 
 
 class BOMItemInline(TabularInline):
@@ -157,8 +184,11 @@ class VariantAdmin(ModelAdmin):
     actions = ["recalculate"]
 
     def save_related(self, request, form, formsets, change):
+        from .workflow import refresh_variant
+
         super().save_related(request, form, formsets, change)
         n = form.instance.ensure_default_bom()
+        refresh_variant(form.instance)
         if n:
             messages.info(request, f"Composição criada automaticamente com {n} peça(s).")
 
@@ -191,6 +221,13 @@ class PartAdmin(ModelAdmin):
     search_fields = ("name", "product__name")
     inlines = [PartAssetInline]
     autocomplete_fields = ("product",)
+
+    def save_related(self, request, form, formsets, change):
+        from .workflow import refresh_product, sync_bom_with_parts
+
+        super().save_related(request, form, formsets, change)
+        sync_bom_with_parts(form.instance.product)
+        refresh_product(form.instance.product)
 
     @admin.display(description="3MF de produção", boolean=True)
     def has_production_file(self, obj):

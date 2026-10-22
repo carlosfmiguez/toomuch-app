@@ -1,0 +1,65 @@
+{% extends "shell.html" %}
+{% block content %}
+<div class="tm-page tm-narrow">
+  <div class="tm-head">
+    <div>
+      <div class="tm-head__eyebrow"><a class="tm-crumb" href="{% url 'catalog:product_list' %}">Produtos</a> / <a class="tm-crumb" href="{% url 'catalog:product_detail' product.pk %}">{{ product.name }}</a></div>
+      <h1 class="tm-head__title">Dados do produto</h1>
+    </div>
+  </div>
+  <form method="post" class="tm-stack">{% csrf_token %}
+    {% for e in form.non_field_errors %}<div class="tm-alert tm-alert--warn">{{ e }}</div>{% endfor %}
+    <section class="tm-card">
+      <div class="tm-card__head"><span class="material-symbols-outlined">badge</span><h2 class="tm-card__title">Identificação</h2></div>
+      <div class="tm-card__body"><div class="tm-formgrid">
+        {% include "catalog/_field.html" with f=form.name span=2 %}
+        {% include "catalog/_field.html" with f=form.sku_base %}
+        {% include "catalog/_field.html" with f=form.category %}
+      </div></div>
+    </section>
+    <section class="tm-card">
+      <div class="tm-card__head"><span class="material-symbols-outlined">description</span><div><h2 class="tm-card__title">Textos de venda</h2><p class="tm-card__sub">Catálogo, loja e anúncios do Mercado Livre e da Shopee</p></div></div>
+      <div class="tm-card__body"><div class="tm-formgrid">
+        {% include "catalog/_field.html" with f=form.short_description span=2 %}
+        {% include "catalog/_field.html" with f=form.long_description span=2 %}
+        {% include "catalog/_field.html" with f=form.tags span=2 %}
+      </div></div>
+    </section>
+    <section class="tm-card">
+      <div class="tm-card__head"><span class="material-symbols-outlined">straighten</span><h2 class="tm-card__title">Medidas e prazo</h2></div>
+      <div class="tm-card__body"><div class="tm-formgrid tm-formgrid--4">
+        {% include "catalog/_field.html" with f=form.height_mm %}
+        {% include "catalog/_field.html" with f=form.width_mm %}
+        {% include "catalog/_field.html" with f=form.depth_mm %}
+        {% include "catalog/_field.html" with f=form.weight_g %}
+        {% include "catalog/_field.html" with f=form.lead_time_days span=2 %}
+      </div></div>
+    </section>
+    <section class="tm-card">
+      <div class="tm-card__head"><span class="material-symbols-outlined">verified</span><div><h2 class="tm-card__title">Origem e licença</h2><p class="tm-card__sub">Modelo de terceiros precisa de licença comercial para entrar no catálogo</p></div></div>
+      <div class="tm-card__body"><div class="tm-formgrid">
+        {% include "catalog/_field.html" with f=form.origin span=2 %}
+        <div class="tm-span-2 tm-formgrid" data-license>
+          {% include "catalog/_field.html" with f=form.license_author %}
+          {% include "catalog/_field.html" with f=form.license_url %}
+          {% include "catalog/_field.html" with f=form.license_terms %}
+          {% include "catalog/_field.html" with f=form.license_cost_per_unit %}
+          {% include "catalog/_field.html" with f=form.license_valid_until %}
+          {% include "catalog/_field.html" with f=form.license_attribution_required %}
+        </div>
+      </div></div>
+    </section>
+    <div class="tm-actionbar">
+      <a class="tm-btn tm-btn--ghost" href="{% url 'catalog:product_detail' product.pk %}">Cancelar</a>
+      <button class="tm-btn tm-btn--primary" type="submit"><span class="material-symbols-outlined">save</span>Salvar dados</button>
+    </div>
+  </form>
+</div>
+<script>
+(function () {
+  var origin = document.getElementById("id_origin"), box = document.querySelector("[data-license]");
+  function sync() { box.hidden = origin.value === "own"; }
+  origin.addEventListener("change", sync); sync();
+})();
+</script>
+{% endblock %}

@@ -53,3 +53,10 @@ def price_list(request):
         by_channel = {p.channel_id: p for p in latest_prices(variant)}
         rows.append({"variant": variant, "cells": [by_channel.get(c.pk) for c in channels]})
     return render(request, "costing/price_list.html", {**shell(request, "Lista de preço"), "channels": channels, "rows": rows})
+
+
+@login_required
+def approvals(request):
+    from apps.catalog.workflow import pending_approvals
+
+    return render(request, "costing/approvals.html", {**shell(request, "Aprovar preços"), "items": pending_approvals()})

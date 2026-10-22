@@ -1,0 +1,30 @@
+{% load tm %}
+<form method="post" action="{% url 'catalog:variant_prices' v.pk %}" data-tm-prices data-cost="{{ v.cost_cached|dot }}">{% csrf_token %}
+  {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+  <div class="tm-eyebrow">Preço por canal</div>
+  {% if prices %}
+  <div class="tm-prices">
+    <div class="tm-prices__head"><span>Canal</span><span class="r">Sugerido</span><span>Preço de venda</span><span class="r">Margem</span><span></span></div>
+    {% for pr in prices %}{% with r=pr.row t=pr.terms %}
+    <div class="tm-prices__row{% if r.approved %} is-approved{% endif %}" data-row
+         {% if t %}data-fee="{{ t.fee_pct|dot }}" data-tax="{{ t.tax_pct|dot }}" data-fixed="{{ t.fixed_fee|dot }}" data-fixed-below="{{ t.fixed_fee_below_price|dot }}" data-ship="{{ t.shipping_subsidy|dot }}" data-ship-from="{{ t.shipping_subsidy_from_price|dot }}"{% endif %}
+         data-min="{{ pr.min_margin|dot }}" data-approved-price="{% if r.approved %}{{ r.current_price|dot }}{% endif %}">
+      <span class="tm-prices__ch">{{ r.channel.name }}</span>
+      <button type="button" class="tm-prices__sug r" data-use="{{ r.suggested_price|brl }}" title="Usar o sugerido">{{ r.suggested_price|brl }}</button>
+      <label class="tm-money"><span>R$</span><input type="text" inputmode="decimal" name="price_{{ r.channel_id }}" value="{{ r.current_price|brl }}" autocomplete="off" data-price></label>
+      <span class="r tm-prices__margin" data-margin>{{ r.margin_pct|floatformat:1 }}%</span>
+      <span class="tm-prices__state">
+        {% if r.approved %}<span class="tm-pill tm-pill--ok" data-state title="Aprovado em {{ r.approved_at|date:'d/m/Y H:i' }}">aprovado</span>
+        {% else %}<button class="tm-btn tm-btn--secondary tm-btn--sm" name="only" value="{{ r.channel_id }}" type="submit" data-state>Aprovar</button>{% endif %}
+      </span>
+    </div>
+    {% endwith %}{% endfor %}
+  </div>
+  <div class="tm-variant__actions">
+    <span class="tm-small tm-muted">Clique no sugerido para usá-lo. A margem já desconta taxa do canal, imposto e frete.</span>
+    <button class="tm-btn tm-btn--primary" type="submit"><span class="material-symbols-outlined">done_all</span>{% if all_approved %}Salvar preços{% else %}Aprovar todos{% endif %}</button>
+  </div>
+  {% else %}
+  <p class="tm-muted tm-small">Sem canais ativos com taxas. <a class="tm-link" href="{% url 'admin:costing_channel_changelist' %}">Configurar canais</a></p>
+  {% endif %}
+</form>

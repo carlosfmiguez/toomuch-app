@@ -1,0 +1,6 @@
+<label class="tm-field{% if span %} tm-span-{{ span }}{% endif %}{% if f.errors %} has-error{% endif %}"{% if attrs %} {{ attrs }}{% endif %}>
+  {% if f.field.widget.input_type == "checkbox" %}<span class="tm-check-inline">{{ f }} {{ f.label|capfirst }}</span>
+  {% else %}<span>{{ f.label|capfirst }}{% if f.field.required %} <span class="tm-req">*</span>{% endif %}</span>{{ f }}{% endif %}
+  {% if f.help_text %}<span class="tm-field__help">{{ f.help_text }}</span>{% endif %}
+  {% for e in f.errors %}<span class="tm-field__error">{{ e }}</span>{% endfor %}
+</label>

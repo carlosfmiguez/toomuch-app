@@ -1,0 +1,52 @@
+<script>
+(function () {
+  // Nome do arquivo escolhido aparece no botão de upload
+  document.querySelectorAll("[data-tm-file]").forEach(function (input) {
+    input.addEventListener("change", function () {
+      var label = input.parentElement.querySelector(".tm-file__name");
+      var n = input.files.length;
+      label.textContent = n === 0 ? label.dataset.empty : (n === 1 ? input.files[0].name : n + " arquivos selecionados");
+      input.parentElement.classList.toggle("has-file", n > 0);
+    });
+  });
+
+  // Margem ao vivo enquanto o preço é digitado (mesma fórmula do motor de custo)
+  function num(s) {
+    if (s === undefined || s === null || s === "") return null;
+    s = String(s).replace(/R\$|\s/g, "");
+    if (s.indexOf(",") >= 0) s = s.replace(/\./g, "").replace(",", ".");
+    var v = parseFloat(s);
+    return isNaN(v) ? null : v;
+  }
+  function margin(price, cost, d) {
+    if (!price || price <= 0) return null;
+    var fee = num(d.fee) || 0, tax = num(d.tax) || 0;
+    var fixed = num(d.fixed) || 0, below = num(d.fixedBelow);
+    if (below !== null && price >= below) fixed = 0;
+    var ship = num(d.ship) || 0, from = num(d.shipFrom);
+    if (from !== null && price < from) ship = 0;
+    var net = price * (1 - fee / 100 - tax / 100) - fixed - ship - cost;
+    return net / price * 100;
+  }
+  document.querySelectorAll("[data-tm-prices]").forEach(function (form) {
+    var cost = num(form.dataset.cost) || 0;
+    form.querySelectorAll("[data-row]").forEach(function (row) {
+      var input = row.querySelector("[data-price]");
+      var out = row.querySelector("[data-margin]");
+      var min = num(row.dataset.min) || 0;
+      var approved = num(row.dataset.approvedPrice);
+      function update() {
+        var p = num(input.value);
+        var m = margin(p, cost, row.dataset);
+        out.textContent = m === null ? "—" : m.toFixed(1).replace(".", ",") + "%";
+        out.classList.toggle("is-low", m !== null && m < min);
+        row.classList.toggle("is-dirty", approved !== null && p !== approved);
+      }
+      input.addEventListener("input", update);
+      var sug = row.querySelector("[data-use]");
+      if (sug) sug.addEventListener("click", function () { input.value = sug.dataset.use; update(); input.focus(); });
+      update();
+    });
+  });
+})();
+</script>

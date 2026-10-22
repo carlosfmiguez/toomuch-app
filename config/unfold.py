@@ -44,6 +44,17 @@ def badge_producao(request):
         return None
 
 
+def badge_aprovacoes(request):
+    """Variantes com preço esperando aprovação."""
+    try:
+        from apps.catalog.workflow import pending_approvals
+
+        n = len(pending_approvals())
+        return str(n) if n else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 UNFOLD = {
     "SITE_TITLE": "Sistema Toomuch",
     "SITE_HEADER": "Toomuch",
@@ -70,9 +81,9 @@ UNFOLD = {
                 "items": [
                     {"title": _("Painel"), "icon": "space_dashboard", "link": reverse_lazy("admin:index"), "badge": "config.unfold.badge_pendencias"},
                     {"title": _("Produtos"), "icon": "deployed_code", "link": reverse_lazy("catalog:product_list")},
+                    {"title": _("Aprovar preços"), "icon": "price_check", "link": reverse_lazy("costing:approvals"), "badge": "config.unfold.badge_aprovacoes"},
                     {"title": _("Produção"), "icon": "precision_manufacturing", "link": reverse_lazy("production:board"), "badge": "config.unfold.badge_producao"},
-                    {"title": _("Catálogo"), "icon": "menu_book", "link": reverse_lazy("publishing:catalog_index")},
-                    {"title": _("Importar em lote"), "icon": "upload_file", "link": reverse_lazy("catalog:import_upload")},
+                    {"title": _("Catálogo PDF e anúncios"), "icon": "menu_book", "link": reverse_lazy("publishing:catalog_index")},
                     {"title": _("Loja pública"), "icon": "storefront", "link": reverse_lazy("public:home")},
                 ],
             },
@@ -82,8 +93,7 @@ UNFOLD = {
                 "items": [
                     {"title": _("Lista de preço"), "icon": "sell", "link": reverse_lazy("costing:price_list")},
                     {"title": _("Calculadora rápida"), "icon": "calculate", "link": reverse_lazy("costing:calculator")},
-                    {"title": _("Canais de venda"), "icon": "hub", "link": reverse_lazy("admin:costing_channel_changelist")},
-                    {"title": _("Preços por canal"), "icon": "price_check", "link": reverse_lazy("admin:costing_pricebychannel_changelist")},
+                    {"title": _("Canais e taxas"), "icon": "hub", "link": reverse_lazy("admin:costing_channel_changelist")},
                     {"title": _("Parâmetros globais"), "icon": "tune", "link": reverse_lazy("admin:costing_globalparams_changelist")},
                     {"title": _("Impressoras"), "icon": "print", "link": reverse_lazy("admin:costing_printer_changelist")},
                 ],
@@ -92,26 +102,11 @@ UNFOLD = {
                 "title": _("Estoque"),
                 "separator": True,
                 "items": [
-                    {"title": _("Filamentos"), "icon": "gradient", "link": reverse_lazy("admin:inventory_filamentsku_changelist")},
-                    {"title": _("Carretéis"), "icon": "data_saver_on", "link": reverse_lazy("admin:inventory_spool_changelist")},
                     {"title": _("Compras"), "icon": "shopping_cart", "link": reverse_lazy("admin:inventory_purchase_changelist")},
+                    {"title": _("Filamentos"), "icon": "gradient", "link": reverse_lazy("admin:inventory_filamentsku_changelist")},
                     {"title": _("Componentes"), "icon": "category", "link": reverse_lazy("admin:catalog_component_changelist")},
+                    {"title": _("Carretéis"), "icon": "data_saver_on", "link": reverse_lazy("admin:inventory_spool_changelist")},
                     {"title": _("Movimentos"), "icon": "swap_vert", "link": reverse_lazy("admin:inventory_stockmovement_changelist")},
-                ],
-            },
-            {
-                "title": _("Cadastros"),
-                "separator": True,
-                "collapsible": True,
-                "items": [
-                    {"title": _("Produtos (admin)"), "icon": "inventory_2", "link": reverse_lazy("admin:catalog_product_changelist")},
-                    {"title": _("Variantes"), "icon": "style", "link": reverse_lazy("admin:catalog_variant_changelist")},
-                    {"title": _("Peças impressas"), "icon": "view_in_ar", "link": reverse_lazy("admin:catalog_part_changelist")},
-                    {"title": _("Arquivos"), "icon": "folder_open", "link": reverse_lazy("admin:catalog_asset_changelist")},
-                    {"title": _("Categorias"), "icon": "label", "link": reverse_lazy("admin:catalog_category_changelist")},
-                    {"title": _("Cores"), "icon": "palette", "link": reverse_lazy("admin:catalog_color_changelist")},
-                    {"title": _("Ordens de produção"), "icon": "assignment", "link": reverse_lazy("admin:production_productionorder_changelist")},
-                    {"title": _("Publicações"), "icon": "publish", "link": reverse_lazy("admin:publishing_publication_changelist")},
                 ],
             },
             {
@@ -122,10 +117,20 @@ UNFOLD = {
                 ],
             },
             {
-                "title": _("Administração"),
+                "title": _("Cadastros avançados"),
                 "separator": True,
                 "collapsible": True,
                 "items": [
+                    {"title": _("Categorias"), "icon": "label", "link": reverse_lazy("admin:catalog_category_changelist")},
+                    {"title": _("Cores"), "icon": "palette", "link": reverse_lazy("admin:catalog_color_changelist")},
+                    {"title": _("Importar em lote"), "icon": "upload_file", "link": reverse_lazy("catalog:import_upload")},
+                    {"title": _("Ordens de produção"), "icon": "assignment", "link": reverse_lazy("admin:production_productionorder_changelist")},
+                    {"title": _("Produtos (admin)"), "icon": "inventory_2", "link": reverse_lazy("admin:catalog_product_changelist")},
+                    {"title": _("Variantes (admin)"), "icon": "style", "link": reverse_lazy("admin:catalog_variant_changelist")},
+                    {"title": _("Peças (admin)"), "icon": "view_in_ar", "link": reverse_lazy("admin:catalog_part_changelist")},
+                    {"title": _("Arquivos"), "icon": "folder_open", "link": reverse_lazy("admin:catalog_asset_changelist")},
+                    {"title": _("Histórico de preços"), "icon": "history", "link": reverse_lazy("admin:costing_pricebychannel_changelist")},
+                    {"title": _("Publicações"), "icon": "publish", "link": reverse_lazy("admin:publishing_publication_changelist")},
                     {"title": _("Usuários"), "icon": "group", "link": reverse_lazy("admin:auth_user_changelist"), "permission": lambda request: request.user.is_superuser},
                 ],
             },
