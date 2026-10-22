@@ -303,7 +303,7 @@ def apply(root: Path | str, mapping: Path | str | None = None, user=None, defaul
     by_name = {sp.name: sp for sp in scanned.values()}
     rows = read_mapping(mapping) if mapping else [
         {"Pasta": sp.folder, "Nome": sp.name, "Categoria (código)": sp.category_code, "SKU-base": sp.sku_base,
-         "Origem": "own", "Autor/licença": "", "Importar?": "sim"} for sp in scanned.values()
+         "Origem": sp.origin, "Autor/licença": sp.author, "Importar?": "sim"} for sp in scanned.values()
     ]
     report = ImportReport()
     for row in rows:
