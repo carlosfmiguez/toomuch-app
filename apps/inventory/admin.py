@@ -54,12 +54,21 @@ class PurchaseAdmin(ModelAdmin):
     actions = ["apply_to_stock"]
 
     def save_model(self, request, obj, form, change):
+        from .models import recompute_filament_from_purchases
+
         if not obj.pk:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
         if not obj.applied:
             obj.apply()
-            messages.success(request, "Compra lançada no estoque e custo médio atualizado.")
+            messages.success(request, "Compra lançada no estoque, custo médio atualizado e custos dos produtos recalculados.")
+        elif obj.filament_id and {"grams_total", "total_cost", "shipping_cost"} & set(form.changed_data):
+            recompute_filament_from_purchases(obj.filament)
+            messages.success(request, "Compra corrigida: custo médio do filamento e custos dos produtos recalculados.")
+
+    def get_changeform_initial_data(self, request):
+        # vindo da ficha do produto: ?filament=<id> já escolhe o filamento
+        return {k: v for k, v in request.GET.items() if k in ("filament", "component")}
 
     @admin.action(description="Lançar no estoque (se ainda não lançada)")
     def apply_to_stock(self, request, queryset):

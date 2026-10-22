@@ -66,6 +66,18 @@ class FilamentSKU(models.Model):
         self.stock_g = total
 
 
+def recompute_filament_from_purchases(fil: "FilamentSKU") -> None:
+    """Custo médio = valor total (itens + frete) ÷ gramas de todas as compras lançadas deste filamento."""
+    grams, value = Decimal("0"), Decimal("0")
+    for p in fil.purchases.filter(applied=True):
+        if p.grams_total:
+            grams += p.grams_total
+            value += p.landed_cost
+    if grams > 0:
+        fil.avg_cost_per_g = (value / grams).quantize(SIX)
+        fil.save(update_fields=["avg_cost_per_g"])
+
+
 class Spool(models.Model):
     class Status(models.TextChoices):
         SEALED = "sealed", "Lacrado"

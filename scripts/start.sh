@@ -10,6 +10,9 @@ python manage.py migrate --noinput
 echo "[start] dados iniciais (parâmetros, impressoras, canais, cores)"
 python manage.py seed_base
 
+echo "[start] custos e preços sugeridos em dia"
+python manage.py recalcular_custos
+
 echo "[start] usuário admin (se DJANGO_SUPERUSER_* estiver definido)"
 python manage.py ensure_superuser
 

@@ -561,3 +561,5 @@ html.dark .tm-wizard__todo { background: rgb(216 158 34 / 0.1); border-color: rg
 }
 .tm-btn .tm-hide-sm { margin-left: -6px; }
 .tm-prices__sug { width: 100%; height: 100%; }
+.tm-warn-text { color: var(--tm-vermelho); }
+.tm-variant__cost > .tm-btn { justify-self: start; grid-column: 1 / -1; }

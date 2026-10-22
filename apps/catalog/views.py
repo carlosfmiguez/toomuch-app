@@ -129,6 +129,8 @@ def product_detail(request, pk):
             "components": [b for b in bom if b.kind == BOMItem.Kind.COMPONENT],
             "prices": workflow.price_rows(v), "status": st, "breakdown": v.cost_breakdown or {},
             "problems": (v.cost_breakdown or {}).get("problemas", []),
+            "filaments": [f for f in (v.main_filament, v.secondary_filament) if f],
+            "no_cost": [f for f in (v.main_filament, v.secondary_filament) if f and f.avg_cost_per_g <= 0],
         })
 
     last = product.variants.order_by("-created_at").first()

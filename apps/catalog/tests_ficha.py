@@ -132,3 +132,45 @@ class FichaFlowTests(TestCase):
         resp = self.client.post(reverse("catalog:product_edit", args=[p.pk]), data)
         self.assertEqual(resp.status_code, 302)
         self.assertTrue(resp["Location"].endswith("?etapa=pecas"))
+
+
+@override_settings(MEDIA_ROOT=TMP)
+class CostStaysFreshTests(TestCase):
+    """Compra de filamento registrada depois da variante: o custo precisa se atualizar sozinho."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_base", verbosity=0)
+        cls.user = get_user_model().objects.create_superuser("carlos", "c@example.com", "senha-forte-123")
+
+    def test_purchase_after_variant_updates_cost(self):
+        from .models import Asset, Part, Variant
+
+        rel = Category.objects.get(code="REL")
+        p = Product.objects.create(name="Sagrada Família", sku_base="TM-REL-SAG", category=rel)
+        part = Part.objects.create(product=p, name="Conjunto")
+        Asset.objects.create(part=part, product=p, kind="3mf_sliced", name="x.gcode.3mf", is_production=True,
+                             grams_total=Decimal("100"), print_time_min=300, parse_error="")
+        fil = FilamentSKU.objects.create(brand="Bambulab", material="PLA LITE", color_name="Branca")
+        v = Variant.objects.create(product=p, sku="TM-REL-SAG-U-BRC", main_filament=fil)
+        workflow.refresh_variant(v)
+        self.assertEqual(v.cost_breakdown["filamento"], "0.00")
+
+        # compra pelo admin, como o usuário faz
+        self.client.force_login(self.user)
+        self.client.post(reverse("admin:inventory_purchase_add"), {
+            "filament": fil.pk, "quantity": "1", "grams_total": "1000", "total_cost": "100.00",
+            "shipping_cost": "0.00", "purchased_at": "2026-10-22",
+        })
+        v.refresh_from_db()
+        self.assertEqual(v.cost_breakdown["filamento"], "10.20", "100 g × R$ 0,10/g + 2 % de desperdício")
+        self.assertEqual(v.cost_breakdown["problemas"], [])
+
+        # corrigir o valor da compra também recalcula
+        purchase = fil.purchases.get()
+        self.client.post(reverse("admin:inventory_purchase_change", args=[purchase.pk]), {
+            "filament": fil.pk, "quantity": "1", "grams_total": "1000", "total_cost": "200.00",
+            "shipping_cost": "0.00", "purchased_at": "2026-10-22",
+        })
+        v.refresh_from_db()
+        self.assertEqual(v.cost_breakdown["filamento"], "20.40")

@@ -201,10 +201,11 @@
               {% else %}<p class="tm-muted tm-small">Ainda sem custo.</p>{% endif %}
               <div class="tm-variant__made tm-small tm-muted">
                 {% for b in v.parts %}{{ b.quantity|floatformat:"-2" }}× {{ b.part.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% for b in v.components %}, {{ b.quantity|floatformat:"-2" }}× {{ b.component.name }}{% endfor %}
-                <br>{{ v.obj.main_filament|default:"filamento principal não escolhido" }}{% if v.obj.secondary_filament %} + {{ v.obj.secondary_filament }}{% endif %}
+                {% for f in v.filaments %}<br>{{ f }} · {% if f.avg_cost_per_g > 0 %}R$ {{ f.avg_cost_per_kg|brl }}/kg{% else %}<strong class="tm-warn-text">sem custo</strong>{% endif %}{% empty %}<br>filamento principal não escolhido{% endfor %}
               </div>
               {% if v.problems %}
               <ul class="tm-problems">{% for p in v.problems %}<li><span class="material-symbols-outlined">error</span>{{ p }}</li>{% endfor %}</ul>
+                {% for f in v.no_cost %}<a class="tm-btn tm-btn--secondary tm-btn--sm" href="{% url 'admin:inventory_purchase_add' %}?filament={{ f.pk }}"><span class="material-symbols-outlined">shopping_cart</span>Registrar compra de {{ f }}</a>{% endfor %}
               {% endif %}
             </div>
           </div>
