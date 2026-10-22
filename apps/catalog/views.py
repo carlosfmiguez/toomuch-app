@@ -32,9 +32,12 @@ from .services import parse_asset
 MODEL_KINDS = [Asset.Kind.THREEMF_SLICED, Asset.Kind.STL, Asset.Kind.STEP, Asset.Kind.F3D, Asset.Kind.THREEMF_PROJECT]
 
 
-def _ficha(product_id: int, anchor: str = "") -> str:
+def _ficha(product_id: int, step: str = "", frag: str = "") -> str:
+    """Endereço da ficha aberta numa etapa do assistente (e, opcionalmente, num ponto dela)."""
     url = reverse("catalog:product_detail", args=[product_id])
-    return f"{url}#{anchor}" if anchor else url
+    if step:
+        url += f"?etapa={step}"
+    return f"{url}#{frag}" if frag else url
 
 
 def _safe_next(request, fallback: str) -> str:
@@ -99,8 +102,8 @@ def product_create(request):
         product.status = Product.Status.DRAFT
         product.save()
         Part.objects.create(product=product, name="Peça única")
-        messages.success(request, f"{product.name} criado com o SKU-base {product.sku_base}. Agora suba o 3MF fatiado da peça.")
-        return redirect(_ficha(product.pk, "pecas"))
+        messages.success(request, f"{product.name} criado com o SKU-base {product.sku_base}. Complete os dados e avance.")
+        return redirect(_ficha(product.pk, "dados"))
     return render(request, "catalog/product_create.html", {**shell(request, "Novo produto"), "form": form})
 
 
@@ -135,9 +138,20 @@ def product_detail(request, pk):
         "secondary_filament": last.secondary_filament_id if last else None,
     })
     photos = product.assets.filter(kind__in=[Asset.Kind.PHOTO, Asset.Kind.RENDER]).order_by("-is_main", "order", "id")
+
+    # Assistente: mostra só a etapa escolhida; sem escolha, abre na próxima pendente.
+    nxt = workflow.next_step(steps)
+    keys = [s.key for s in steps]
+    key = request.GET.get("etapa")
+    if key not in keys:
+        key = nxt.key if nxt else "publicar"
+    i = keys.index(key)
+    current = steps[i]
     return render(request, "catalog/product_detail.html", {
         **shell(request, product.name),
-        "product": product, "steps": steps, "next": workflow.next_step(steps),
+        "product": product, "steps": steps, "next": nxt, "step": current,
+        "prev_step": steps[i - 1] if i > 0 else None, "next_in_order": steps[i + 1] if i + 1 < len(steps) else None,
+        "data_form": ProductDataForm(instance=product) if key == "dados" else None,
         "parts": parts, "has_secondary": has_secondary, "new_part_form": PartForm(prefix="new"),
         "file_form": PartFileForm(), "variants": variants, "variant_form": vform, "photos": photos,
         "no_cost_filaments": FilamentSKU.objects.filter(active=True, avg_cost_per_g__lte=0).exists(),
@@ -155,7 +169,7 @@ def product_edit(request, pk):
         if {"license_cost_per_unit"} & set(form.changed_data):
             workflow.refresh_product(product)
         messages.success(request, "Dados do produto salvos.")
-        return redirect(_ficha(product.pk))
+        return redirect(_safe_next(request, _ficha(product.pk, "dados")))
     return render(request, "catalog/product_edit.html", {**shell(request, f"Dados · {product.name}"), "form": form, "product": product})
 
 
@@ -297,7 +311,7 @@ def variant_add(request, pk):
     )
     workflow.refresh_variant(variant)
     messages.success(request, f"Variante {variant.sku} criada com custo R$ {variant.cost_cached}. Confira e aprove o preço.")
-    return redirect(_ficha(pk, f"v{variant.pk}"))
+    return redirect(_ficha(pk, "variantes", f"v{variant.pk}"))
 
 
 @login_required
@@ -335,7 +349,7 @@ def variant_edit(request, pk):
                 product.variants.exclude(pk=variant.pk).update(is_default=False)
             workflow.refresh_variant(variant)
             messages.success(request, f"{variant.sku} salva. Custo R$ {variant.cost_cached}.")
-            return redirect(_ficha(product.pk, f"v{variant.pk}"))
+            return redirect(_ficha(product.pk, "variantes", f"v{variant.pk}"))
     return render(request, "catalog/variant_edit.html", {
         **shell(request, f"Variante {variant.sku}"),
         "variant": variant, "product": product, "form": form, "comp_form": comp_form,
@@ -364,7 +378,7 @@ def variant_recalculate(request, pk):
     variant = get_object_or_404(Variant, pk=pk)
     workflow.refresh_variant(variant)
     messages.success(request, f"{variant.sku}: custo R$ {variant.cost_cached} e preços sugeridos recalculados.")
-    return redirect(_safe_next(request, _ficha(variant.product_id, f"v{variant.pk}")))
+    return redirect(_safe_next(request, _ficha(variant.product_id, "variantes", f"v{variant.pk}")))
 
 
 @login_required
@@ -398,7 +412,10 @@ def variant_prices(request, pk):
         messages.success(request, f"{variant.sku}: aprovado {msg}.")
         for r in below:
             messages.warning(request, f"{r.channel}: margem de {r.margin_pct}% está abaixo do mínimo do canal.")
-    return redirect(_safe_next(request, _ficha(variant.product_id, f"v{variant.pk}")))
+    fallback = _ficha(variant.product_id, "preco", f"v{variant.pk}")
+    if approved and not any(workflow.variant_price_status(x)["pending"] for x in variant.product.variants.all()):
+        fallback = _ficha(variant.product_id, "fotos")  # todos os preços aprovados: segue para a próxima etapa
+    return redirect(_safe_next(request, fallback))
 
 
 # --- fotos -------------------------------------------------------------------

@@ -16,263 +16,299 @@
     </div>
     <div class="tm-head__actions">
       {% if product.ready_for_catalog %}<a class="tm-btn tm-btn--ghost" href="{% url 'public:product' product.sku_base %}" target="_blank"><span class="material-symbols-outlined">storefront</span>Ver na loja</a>{% endif %}
-      <a class="tm-btn tm-btn--secondary" href="{% url 'catalog:product_edit' product.pk %}"><span class="material-symbols-outlined">edit</span>Editar dados</a>
     </div>
   </div>
 
-  {# ---------- Etapas ---------- #}
+  {# ---------- Etapas (navegação do assistente) ---------- #}
   <nav class="tm-steps" aria-label="Etapas do cadastro">
     {% for s in steps %}
-    <a class="tm-step tm-step--{{ s.state }}{% if next and next.key == s.key %} tm-step--current{% endif %}" href="#{{ s.anchor }}">
+    <a class="tm-step tm-step--{{ s.state }}{% if s.key == step.key %} tm-step--active{% endif %}{% if next and next.key == s.key %} tm-step--suggested{% endif %}" href="?etapa={{ s.key }}"{% if s.key == step.key %} aria-current="step"{% endif %}>
       <span class="tm-step__dot">{% if s.done %}<span class="material-symbols-outlined">check</span>{% else %}{{ s.number }}{% endif %}</span>
-      <span class="tm-step__text"><span class="tm-step__title">{{ s.title }}</span><span class="tm-step__state">{% if s.done %}feito{% elif next and next.key == s.key %}agora{% else %}pendente{% endif %}</span></span>
+      <span class="tm-step__text"><span class="tm-step__title">{{ s.title }}</span><span class="tm-step__state">{% if s.key == step.key %}você está aqui{% elif s.done %}feito{% elif next and next.key == s.key %}próxima{% else %}pendente{% endif %}</span></span>
     </a>
     {% endfor %}
   </nav>
 
-  {% if next %}
-  <div class="tm-next">
-    <span class="material-symbols-outlined tm-next__icon">arrow_forward</span>
-    <div class="tm-next__body">
-      <div class="tm-next__title">Próximo passo: {{ next.title }}</div>
-      <ul class="tm-next__list">{% for t in next.todo|slice:":4" %}<li>{{ t }}</li>{% endfor %}{% if next.todo|length > 4 %}<li>e mais {{ next.todo|length|add:"-4" }}…</li>{% endif %}</ul>
-    </div>
-    <a class="tm-btn tm-btn--primary" href="#{{ next.anchor }}">Ir para lá</a>
-  </div>
-  {% else %}
-  <div class="tm-next tm-next--done">
-    <span class="material-symbols-outlined tm-next__icon">task_alt</span>
-    <div class="tm-next__body"><div class="tm-next__title">Tudo pronto</div><p class="tm-next__list">O produto está no catálogo, na loja e pode ir para o Tiny.</p></div>
-  </div>
-  {% endif %}
-
-  {# ---------- 1. Dados ---------- #}
-  <section class="tm-card tm-section" id="dados">
-    <div class="tm-card__head">
-      <span class="tm-section__n{% if steps.0.done %} is-done{% endif %}">1</span>
-      <div><h2 class="tm-card__title">Dados do produto</h2><p class="tm-card__sub">O que aparece no catálogo, na loja e nos anúncios</p></div>
-      <div class="tm-card__tools"><a class="tm-btn tm-btn--ghost tm-btn--sm" href="{% url 'catalog:product_edit' product.pk %}"><span class="material-symbols-outlined">edit</span>Editar</a></div>
-    </div>
-    <div class="tm-card__body">
-      <div class="tm-facts">
-        <div class="tm-fact tm-fact--wide"><span class="tm-fact__k">Descrição curta</span><span class="tm-fact__v">{% if product.short_description %}{{ product.short_description }}{% else %}<em class="tm-muted">não preenchida</em>{% endif %}</span></div>
-        <div class="tm-fact"><span class="tm-fact__k">Medidas (A × L × P)</span><span class="tm-fact__v">{% if product.height_mm %}{{ product.height_mm }} × {{ product.width_mm|default:"—" }} × {{ product.depth_mm|default:"—" }} mm{% else %}<em class="tm-muted">—</em>{% endif %}</span></div>
-        <div class="tm-fact"><span class="tm-fact__k">Peso</span><span class="tm-fact__v">{% if product.weight_g %}{{ product.weight_g }} g{% else %}<em class="tm-muted">—</em>{% endif %}</span></div>
-        <div class="tm-fact"><span class="tm-fact__k">Prazo</span><span class="tm-fact__v">{{ product.lead_time_days }} dias úteis</span></div>
-        <div class="tm-fact"><span class="tm-fact__k">Origem</span><span class="tm-fact__v">{{ product.get_origin_display }}{% if not product.license_is_valid %} <span class="tm-pill tm-pill--warn">sem licença válida</span>{% endif %}</span></div>
-      </div>
-    </div>
-  </section>
-
-  {# ---------- 2. Peças ---------- #}
-  <section class="tm-card tm-section" id="pecas">
-    <div class="tm-card__head">
-      <span class="tm-section__n{% if steps.1.done %} is-done{% endif %}">2</span>
-      <div><h2 class="tm-card__title">Peças impressas e 3MF fatiado</h2><p class="tm-card__sub">Cada peça que sai da impressora. O 3MF fatiado dá as gramas e o tempo que viram custo.</p></div>
-    </div>
-    <div class="tm-card__body tm-stack">
-      {% for p in parts %}
-      <div class="tm-part{% if not p.production %} tm-part--missing{% endif %}">
-        <div class="tm-part__thumb">
-          {% if p.production and p.production.thumbnail %}<img src="{{ p.production.thumbnail.url }}" alt="">{% else %}<span class="material-symbols-outlined">view_in_ar</span>{% endif %}
-        </div>
-        <div class="tm-part__main">
-          <form method="post" action="{% url 'catalog:part_update' p.obj.pk %}" class="tm-part__form">{% csrf_token %}
-            <label class="tm-field tm-field--grow">Nome da peça{{ p.form.name }}</label>
-            <label class="tm-field tm-field--xs">Qtd.{{ p.form.default_qty }}</label>
-            <label class="tm-field">Cor{{ p.form.color_slot }}</label>
-            <button class="tm-btn tm-btn--secondary tm-btn--icon" type="submit" title="Salvar peça"><span class="material-symbols-outlined">save</span></button>
-          </form>
-
-          {% if p.production %}
-          <div class="tm-part__file">
-            <span class="tm-pill tm-pill--ok"><span class="material-symbols-outlined tm-ico-xs">check</span>3MF de produção</span>
-            <strong>{{ p.production.grams_total|floatformat:1 }} g</strong>
-            <span class="tm-sep">·</span><strong>{{ p.production.print_time_min|hm }}</strong>
-            <span class="tm-sep">·</span><span class="tm-muted">{{ p.production.printer.name|default:"qualquer impressora" }} · v{{ p.production.version }} · {{ p.production.name|truncatechars:40 }}</span>
-          </div>
-          {% else %}
-          <div class="tm-part__file tm-part__file--missing"><span class="material-symbols-outlined">upload</span>Falta o 3MF fatiado desta peça.</div>
-          {% endif %}
-
-          <form method="post" enctype="multipart/form-data" action="{% url 'catalog:part_upload' p.obj.pk %}" class="tm-upload">{% csrf_token %}
-            <label class="tm-file">
-              <input type="file" name="file" accept=".3mf" required data-tm-file>
-              <span class="material-symbols-outlined">attach_file</span><span class="tm-file__name" data-empty="Escolher .gcode.3mf">Escolher .gcode.3mf</span>
-            </label>
-            <select class="tm-select tm-select--auto" name="printer" title="Fatiado para qual impressora">
-              <option value="">qualquer impressora</option>
-              {% for pr in file_form.fields.printer.queryset %}<option value="{{ pr.pk }}">{{ pr.name }}</option>{% endfor %}
-            </select>
-            <button class="tm-btn {% if p.production %}tm-btn--secondary{% else %}tm-btn--primary{% endif %}" type="submit"><span class="material-symbols-outlined">upload</span>{% if p.production %}Trocar 3MF{% else %}Enviar 3MF{% endif %}</button>
-          </form>
-
-          {% if p.files|length > 1 or not p.production and p.files %}
-          <details class="tm-more"><summary>Arquivos desta peça ({{ p.files|length }})</summary>
-            <table class="tm-table tm-table--compact">
-              {% for f in p.files %}<tr>
-                <td>{{ f.name|truncatechars:48 }}</td><td class="tm-muted">{{ f.get_kind_display }} · v{{ f.version }}</td>
-                <td>{% if f.is_production %}<span class="tm-pill tm-pill--ok">produção</span>{% elif f.parse_error %}<span class="tm-pill tm-pill--warn" title="{{ f.parse_error }}">erro de leitura</span>{% else %}<span class="tm-pill">histórico</span>{% endif %}</td>
-                <td class="r"><form method="post" action="{% url 'catalog:asset_delete' f.pk %}" onsubmit="return confirm('Remover este arquivo?')">{% csrf_token %}<button class="tm-btn tm-btn--ghost tm-btn--sm tm-btn--icon" title="Remover"><span class="material-symbols-outlined">delete</span></button></form></td>
-              </tr>{% endfor %}
-            </table>
-          </details>
-          {% endif %}
-        </div>
-        <form method="post" action="{% url 'catalog:part_delete' p.obj.pk %}" class="tm-part__del" onsubmit="return confirm('Remover a peça {{ p.obj.name|escapejs }}? Ela sai também da composição das variantes.')">{% csrf_token %}
-          <button class="tm-btn tm-btn--ghost tm-btn--sm tm-btn--icon" title="Remover peça"><span class="material-symbols-outlined">delete</span></button>
-        </form>
-      </div>
-      {% empty %}
-      <div class="tm-empty"><span class="material-symbols-outlined">view_in_ar</span>Nenhuma peça ainda. Adicione abaixo.</div>
-      {% endfor %}
-
-      <form method="post" action="{% url 'catalog:part_add' product.pk %}" class="tm-addrow">{% csrf_token %}
-        <span class="tm-addrow__label"><span class="material-symbols-outlined">add_circle</span>Outra peça</span>
-        <label class="tm-field tm-field--grow">Nome<input type="text" name="new-name" placeholder="Ex.: base, cúpula, pés" required maxlength="80"></label>
-        <label class="tm-field tm-field--xs">Qtd.<input type="number" name="new-default_qty" value="1" min="1"></label>
-        <label class="tm-field">Cor<select name="new-color_slot"><option value="main">Cor principal</option><option value="secondary">Cor secundária</option></select></label>
-        <button class="tm-btn tm-btn--secondary" type="submit">Adicionar peça</button>
-      </form>
-      <p class="tm-hint"><span class="material-symbols-outlined">info</span><span>No Bambu Studio: <strong>Arquivo → Exportar → Exportar arquivo fatiado da placa</strong>. Se as peças saem juntas na mesma placa, cadastre uma peça só.</span></p>
-    </div>
-  </section>
-
-  {# ---------- 3 e 4. Variantes, custo e preço ---------- #}
-  <section class="tm-section" id="variantes">
-    <div class="tm-sectionhead">
-      <span class="tm-section__n{% if steps.2.done %} is-done{% endif %}">3</span><span class="tm-section__n{% if steps.3.done %} is-done{% endif %}" style="margin-left:-6px">4</span>
-      <div><h2 class="tm-sectionhead__title">Variantes, custo e preço</h2><p class="tm-card__sub">Cada tamanho/cor vendável. O custo é recalculado sozinho; você só confere e aprova o preço de cada canal.</p></div>
+  {# ---------- Etapa atual ---------- #}
+  <section class="tm-card tm-wizard" id="etapa">
+    <div class="tm-wizard__head">
+      <div class="tm-wizard__count">Etapa {{ step.number }} de {{ steps|length }}</div>
+      <h2 class="tm-wizard__title">{{ step.title }}</h2>
+      <p class="tm-wizard__lead">
+        {% if step.key == "dados" %}Nome, textos de venda, medidas e licença. É o que aparece no catálogo, na loja e nos anúncios.
+        {% elif step.key == "pecas" %}Cada peça que sai da impressora, com o 3MF fatiado dela. As gramas e o tempo do arquivo viram custo.
+        {% elif step.key == "variantes" %}Cada tamanho/cor vendável. Ao criar, o SKU é gerado e o custo é calculado na hora.
+        {% elif step.key == "preco" %}Confira o preço de cada canal. A margem muda enquanto você digita; aprove para liberar a venda.
+        {% elif step.key == "fotos" %}A foto principal (estrela) vai para o catálogo, a loja e os anúncios.
+        {% else %}Produto ativo e com tudo verde entra no catálogo em PDF, na loja e no envio para o Tiny.{% endif %}
+      </p>
+      {% if step.todo %}
+      <ul class="tm-wizard__todo">{% for t in step.todo|slice:":5" %}<li><span class="material-symbols-outlined">radio_button_unchecked</span>{{ t }}</li>{% endfor %}{% if step.todo|length > 5 %}<li class="tm-muted">e mais {{ step.todo|length|add:"-5" }}…</li>{% endif %}</ul>
+      {% elif step.done %}
+      <div class="tm-wizard__ok"><span class="material-symbols-outlined">check_circle</span>Etapa concluída{% if next_in_order %} — pode avançar.{% endif %}</div>
+      {% endif %}
     </div>
 
-    {% if not has_filaments %}
-    <div class="tm-alert tm-alert--warn"><span class="material-symbols-outlined">warning</span><div>Nenhum filamento cadastrado. <a class="tm-link" href="{% url 'admin:inventory_purchase_add' %}">Registre uma compra de filamento</a> — é dela que vem o custo por grama.</div></div>
-    {% elif no_cost_filaments %}
-    <div class="tm-alert"><span class="material-symbols-outlined">info</span><div>Há filamentos sem custo médio. Filamento sem compra registrada entra com custo zero. <a class="tm-link" href="{% url 'admin:inventory_purchase_add' %}">Registrar compra</a></div></div>
-    {% endif %}
-
-    {% for v in variants %}
-    <article class="tm-card tm-variant" id="v{{ v.obj.pk }}">
-      <div class="tm-card__head">
-        <div class="tm-variant__id">
-          <div class="tm-variant__title">
-            {% if v.obj.primary_color.hex %}<span class="tm-swatch tm-swatch--lg" style="background:{{ v.obj.primary_color.hex }}"></span>{% endif %}
-            {% if v.obj.secondary_color.hex %}<span class="tm-swatch tm-swatch--lg tm-swatch--overlap" style="background:{{ v.obj.secondary_color.hex }}"></span>{% endif %}
-            <span>{{ v.obj.size }}{% if v.obj.primary_color %} · {{ v.obj.primary_color.name }}{% endif %}{% if v.obj.secondary_color %} + {{ v.obj.secondary_color.name }}{% endif %}</span>
-            {% if v.obj.is_default %}<span class="tm-pill">padrão</span>{% endif %}
-          </div>
-          <div class="tm-mono tm-muted">{{ v.obj.sku }}</div>
-        </div>
-        <div class="tm-card__tools">
-          {% if v.status.all_approved and not v.status.below %}<span class="tm-pill tm-pill--ok">preço aprovado</span>{% elif v.status.pending %}<span class="tm-pill tm-pill--info">aprovar preço</span>{% endif %}
-          <form method="post" action="{% url 'catalog:variant_recalculate' v.obj.pk %}">{% csrf_token %}<button class="tm-btn tm-btn--ghost tm-btn--sm tm-btn--icon" type="submit" title="Recalcular custo agora"><span class="material-symbols-outlined">refresh</span></button></form>
-          <a class="tm-btn tm-btn--secondary tm-btn--sm" href="{% url 'catalog:variant_edit' v.obj.pk %}"><span class="material-symbols-outlined">tune</span>Editar</a>
-        </div>
-      </div>
-
-      <div class="tm-variant__body">
-        {# custo #}
-        <div class="tm-variant__cost">
-          <div class="tm-eyebrow">Custo unitário</div>
-          {% if v.obj.cost_cached is not None %}
-          <div class="tm-num">R$ {{ v.obj.cost_cached|brl }}</div>
-          <dl class="tm-breakdown">
-            <div><dt>Filamento</dt><dd>{{ v.breakdown.filamento|brl }}</dd></div>
-            <div><dt>Hora-máquina</dt><dd>{{ v.breakdown.hora_maquina|brl }}</dd></div>
-            <div><dt>Mão de obra <small>{{ v.obj.labor_minutes }} min</small></dt><dd>{{ v.breakdown.mao_de_obra|brl }}</dd></div>
-            {% if v.breakdown.componentes != "0.00" %}<div><dt>Componentes</dt><dd>{{ v.breakdown.componentes|brl }}</dd></div>{% endif %}
-            <div><dt>Embalagem</dt><dd>{{ v.breakdown.embalagem|brl }}</dd></div>
-            {% if v.breakdown.licenca != "0.00" %}<div><dt>Licença</dt><dd>{{ v.breakdown.licenca|brl }}</dd></div>{% endif %}
-            <div><dt>Provisão de falha</dt><dd>{{ v.breakdown.falha|brl }}</dd></div>
-          </dl>
-          {% else %}<p class="tm-muted tm-small">Ainda sem custo.</p>{% endif %}
-          <div class="tm-variant__made tm-small tm-muted">
-            {% for b in v.parts %}{{ b.quantity|floatformat:"-2" }}× {{ b.part.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% for b in v.components %}, {{ b.quantity|floatformat:"-2" }}× {{ b.component.name }}{% endfor %}
-            <br>{{ v.obj.main_filament|default:"filamento principal não escolhido" }}{% if v.obj.secondary_filament %} + {{ v.obj.secondary_filament }}{% endif %}
-          </div>
-          {% if v.problems %}
-          <ul class="tm-problems">{% for p in v.problems %}<li><span class="material-symbols-outlined">error</span>{{ p }}</li>{% endfor %}</ul>
-          {% endif %}
-        </div>
-
-        {# preço #}
-        <div class="tm-variant__price">{% include "costing/_price_form.html" with v=v.obj prices=v.prices all_approved=v.status.all_approved %}</div>
-      </div>
-    </article>
-    {% endfor %}
-
-    <details class="tm-card tm-newvariant"{% if not variants %} open{% endif %}>
-      <summary class="tm-card__head"><span class="material-symbols-outlined">add_circle</span><div><h3 class="tm-card__title">{% if variants %}Adicionar outra variante (tamanho ou cor){% else %}Criar a primeira variante{% endif %}</h3><p class="tm-card__sub">O SKU é gerado sozinho (SKU-base + tamanho + cor) e a composição entra com as peças do produto.</p></div><span class="material-symbols-outlined tm-newvariant__chev">expand_more</span></summary>
-      <form class="tm-card__body" method="post" action="{% url 'catalog:variant_add' product.pk %}">{% csrf_token %}
+    <div class="tm-wizard__body">
+    {% if step.key == "dados" %}
+      <form method="post" action="{% url 'catalog:product_edit' product.pk %}" id="dados-form" class="tm-stack">{% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'catalog:product_detail' product.pk %}?etapa=pecas">
         <div class="tm-formgrid">
-          <label class="tm-field">Tamanho (Único, P, M, G…){{ variant_form.size }}</label>
-          <label class="tm-field">Cor principal{{ variant_form.primary_color }}</label>
-          <label class="tm-field tm-span-2">Filamento da cor principal{{ variant_form.main_filament }}</label>
-          {% if has_secondary %}
-          <label class="tm-field">Cor secundária{{ variant_form.secondary_color }}</label>
-          <label class="tm-field tm-span-2">Filamento da cor secundária{{ variant_form.secondary_filament }}</label>
-          {% endif %}
+          {% include "catalog/_field.html" with f=data_form.name span=2 %}
+          {% include "catalog/_field.html" with f=data_form.sku_base %}
+          {% include "catalog/_field.html" with f=data_form.category %}
+          {% include "catalog/_field.html" with f=data_form.short_description span=2 %}
         </div>
-        <div class="tm-row tm-row--end" style="margin-top:14px"><button class="tm-btn tm-btn--primary" type="submit"><span class="material-symbols-outlined">add</span>Criar variante e calcular custo</button></div>
+        <div class="tm-formgrid tm-formgrid--4">
+          {% include "catalog/_field.html" with f=data_form.height_mm %}
+          {% include "catalog/_field.html" with f=data_form.width_mm %}
+          {% include "catalog/_field.html" with f=data_form.depth_mm %}
+          {% include "catalog/_field.html" with f=data_form.weight_g %}
+          {% include "catalog/_field.html" with f=data_form.lead_time_days %}
+          {% include "catalog/_field.html" with f=data_form.origin span=2 %}
+        </div>
+        <div class="tm-formgrid" data-license>
+          {% include "catalog/_field.html" with f=data_form.license_author %}
+          {% include "catalog/_field.html" with f=data_form.license_url %}
+          {% include "catalog/_field.html" with f=data_form.license_terms %}
+          {% include "catalog/_field.html" with f=data_form.license_cost_per_unit %}
+          {% include "catalog/_field.html" with f=data_form.license_valid_until %}
+          {% include "catalog/_field.html" with f=data_form.license_attribution_required %}
+        </div>
+        <details class="tm-more"><summary>Descrição longa e tags SEO (opcional)</summary>
+          <div class="tm-formgrid" style="margin-top:10px">
+            {% include "catalog/_field.html" with f=data_form.long_description span=2 %}
+            {% include "catalog/_field.html" with f=data_form.tags span=2 %}
+          </div>
+        </details>
       </form>
-    </details>
-  </section>
+      <script>
+      (function () {
+        var origin = document.getElementById("id_origin"), box = document.querySelector("[data-license]");
+        if (!origin || !box) return;
+        function sync() { box.hidden = origin.value === "own"; }
+        origin.addEventListener("change", sync); sync();
+      })();
+      </script>
 
-  {# ---------- 5. Fotos ---------- #}
-  <section class="tm-card tm-section" id="fotos">
-    <div class="tm-card__head">
-      <span class="tm-section__n{% if steps.4.done %} is-done{% endif %}">5</span>
-      <div><h2 class="tm-card__title">Fotos</h2><p class="tm-card__sub">A foto principal (estrela) vai para o catálogo, a loja e os anúncios</p></div>
-    </div>
-    <div class="tm-card__body tm-stack">
-      {% if photos %}
-      <div class="tm-gallery">
-        {% for a in photos %}
-        <figure class="tm-gallery__item{% if a.is_main %} is-main{% endif %}">
-          {% if a.thumbnail %}<img src="{{ a.thumbnail.url }}" alt="{{ a.name }}" loading="lazy">{% elif a.file %}<img src="{{ a.file.url }}" alt="{{ a.name }}" loading="lazy">{% endif %}
-          <figcaption>
-            {% if a.is_main %}<span class="tm-pill tm-pill--ok"><span class="material-symbols-outlined tm-ico-xs">star</span>principal</span>
-            {% else %}<form method="post" action="{% url 'catalog:photo_main' a.pk %}">{% csrf_token %}<button class="tm-btn tm-btn--ghost tm-btn--sm" title="Tornar principal"><span class="material-symbols-outlined">star</span>Principal</button></form>{% endif %}
-            <form method="post" action="{% url 'catalog:asset_delete' a.pk %}" onsubmit="return confirm('Remover esta foto?')">{% csrf_token %}<button class="tm-btn tm-btn--ghost tm-btn--sm tm-btn--icon" title="Remover"><span class="material-symbols-outlined">delete</span></button></form>
-          </figcaption>
-        </figure>
+    {% elif step.key == "pecas" %}
+      <div class="tm-stack">
+        {% for p in parts %}
+        <div class="tm-part{% if not p.production %} tm-part--missing{% endif %}">
+          <div class="tm-part__thumb">
+            {% if p.production and p.production.thumbnail %}<img src="{{ p.production.thumbnail.url }}" alt="">{% else %}<span class="material-symbols-outlined">view_in_ar</span>{% endif %}
+          </div>
+          <div class="tm-part__main">
+            <form method="post" action="{% url 'catalog:part_update' p.obj.pk %}" class="tm-part__form">{% csrf_token %}
+              <label class="tm-field tm-field--grow">Nome da peça{{ p.form.name }}</label>
+              <label class="tm-field tm-field--xs">Qtd.{{ p.form.default_qty }}</label>
+              <label class="tm-field">Cor{{ p.form.color_slot }}</label>
+              <button class="tm-btn tm-btn--secondary tm-btn--icon" type="submit" title="Salvar peça"><span class="material-symbols-outlined">save</span></button>
+            </form>
+
+            {% if p.production %}
+            <div class="tm-part__file">
+              <span class="tm-pill tm-pill--ok"><span class="material-symbols-outlined tm-ico-xs">check</span>3MF de produção</span>
+              <strong>{{ p.production.grams_total|floatformat:1 }} g</strong>
+              <span class="tm-sep">·</span><strong>{{ p.production.print_time_min|hm }}</strong>
+              <span class="tm-sep">·</span><span class="tm-muted">{{ p.production.printer.name|default:"qualquer impressora" }} · v{{ p.production.version }} · {{ p.production.name|truncatechars:40 }}</span>
+            </div>
+            {% else %}
+            <div class="tm-part__file tm-part__file--missing"><span class="material-symbols-outlined">upload</span>Falta o 3MF fatiado desta peça.</div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" action="{% url 'catalog:part_upload' p.obj.pk %}" class="tm-upload">{% csrf_token %}
+              <label class="tm-file">
+                <input type="file" name="file" accept=".3mf" required data-tm-file>
+                <span class="material-symbols-outlined">attach_file</span><span class="tm-file__name" data-empty="Escolher .gcode.3mf">Escolher .gcode.3mf</span>
+              </label>
+              <select class="tm-select tm-select--auto" name="printer" title="Fatiado para qual impressora">
+                <option value="">qualquer impressora</option>
+                {% for pr in file_form.fields.printer.queryset %}<option value="{{ pr.pk }}">{{ pr.name }}</option>{% endfor %}
+              </select>
+              <button class="tm-btn {% if p.production %}tm-btn--secondary{% else %}tm-btn--primary{% endif %}" type="submit"><span class="material-symbols-outlined">upload</span>{% if p.production %}Trocar 3MF{% else %}Enviar 3MF{% endif %}</button>
+            </form>
+
+            {% if p.files|length > 1 or not p.production and p.files %}
+            <details class="tm-more"><summary>Arquivos desta peça ({{ p.files|length }})</summary>
+              <table class="tm-table tm-table--compact">
+                {% for f in p.files %}<tr>
+                  <td>{{ f.name|truncatechars:48 }}</td><td class="tm-muted">{{ f.get_kind_display }} · v{{ f.version }}</td>
+                  <td>{% if f.is_production %}<span class="tm-pill tm-pill--ok">produção</span>{% elif f.parse_error %}<span class="tm-pill tm-pill--warn" title="{{ f.parse_error }}">erro de leitura</span>{% else %}<span class="tm-pill">histórico</span>{% endif %}</td>
+                  <td class="r"><form method="post" action="{% url 'catalog:asset_delete' f.pk %}" onsubmit="return confirm('Remover este arquivo?')">{% csrf_token %}<button class="tm-btn tm-btn--ghost tm-btn--sm tm-btn--icon" title="Remover"><span class="material-symbols-outlined">delete</span></button></form></td>
+                </tr>{% endfor %}
+              </table>
+            </details>
+            {% endif %}
+          </div>
+          <form method="post" action="{% url 'catalog:part_delete' p.obj.pk %}" class="tm-part__del" onsubmit="return confirm('Remover a peça {{ p.obj.name|escapejs }}? Ela sai também da composição das variantes.')">{% csrf_token %}
+            <button class="tm-btn tm-btn--ghost tm-btn--sm tm-btn--icon" title="Remover peça"><span class="material-symbols-outlined">delete</span></button>
+          </form>
+        </div>
+        {% empty %}
+        <div class="tm-empty"><span class="material-symbols-outlined">view_in_ar</span>Nenhuma peça ainda. Adicione abaixo.</div>
+        {% endfor %}
+
+        <form method="post" action="{% url 'catalog:part_add' product.pk %}" class="tm-addrow">{% csrf_token %}
+          <span class="tm-addrow__label"><span class="material-symbols-outlined">add_circle</span>Outra peça</span>
+          <label class="tm-field tm-field--grow">Nome<input type="text" name="new-name" placeholder="Ex.: base, cúpula, pés" required maxlength="80"></label>
+          <label class="tm-field tm-field--xs">Qtd.<input type="number" name="new-default_qty" value="1" min="1"></label>
+          <label class="tm-field">Cor<select name="new-color_slot"><option value="main">Cor principal</option><option value="secondary">Cor secundária</option></select></label>
+          <button class="tm-btn tm-btn--secondary" type="submit">Adicionar peça</button>
+        </form>
+        <p class="tm-hint"><span class="material-symbols-outlined">info</span><span>No Bambu Studio: <strong>Arquivo → Exportar → Exportar arquivo fatiado da placa</strong>. Se as peças saem juntas na mesma placa, cadastre uma peça só.</span></p>
+      </div>
+
+    {% elif step.key == "variantes" %}
+      <div class="tm-stack">
+        {% if not has_filaments %}
+        <div class="tm-alert tm-alert--warn"><span class="material-symbols-outlined">warning</span><div>Nenhum filamento cadastrado. <a class="tm-link" href="{% url 'admin:inventory_purchase_add' %}">Registre uma compra de filamento</a> — é dela que vem o custo por grama.</div></div>
+        {% elif no_cost_filaments %}
+        <div class="tm-alert"><span class="material-symbols-outlined">info</span><div>Há filamentos sem custo médio. Filamento sem compra registrada entra com custo zero. <a class="tm-link" href="{% url 'admin:inventory_purchase_add' %}">Registrar compra</a></div></div>
+        {% endif %}
+        {% for v in variants %}
+        <article class="tm-card tm-variant tm-variant--flat" id="v{{ v.obj.pk }}">
+          <div class="tm-card__head">
+            <div class="tm-variant__id">
+              <div class="tm-variant__title">
+                {% if v.obj.primary_color.hex %}<span class="tm-swatch tm-swatch--lg" style="background:{{ v.obj.primary_color.hex }}"></span>{% endif %}
+                {% if v.obj.secondary_color.hex %}<span class="tm-swatch tm-swatch--lg tm-swatch--overlap" style="background:{{ v.obj.secondary_color.hex }}"></span>{% endif %}
+                <span>{{ v.obj.size }}{% if v.obj.primary_color %} · {{ v.obj.primary_color.name }}{% endif %}{% if v.obj.secondary_color %} + {{ v.obj.secondary_color.name }}{% endif %}</span>
+                {% if v.obj.is_default %}<span class="tm-pill">padrão</span>{% endif %}
+              </div>
+              <div class="tm-mono tm-muted">{{ v.obj.sku }}</div>
+            </div>
+            <div class="tm-card__tools">
+              {% if v.status.all_approved and not v.status.below %}<span class="tm-pill tm-pill--ok">preço aprovado</span>{% elif v.status.pending %}<span class="tm-pill tm-pill--info">aprovar preço</span>{% endif %}
+              <form method="post" action="{% url 'catalog:variant_recalculate' v.obj.pk %}">{% csrf_token %}<button class="tm-btn tm-btn--ghost tm-btn--sm tm-btn--icon" type="submit" title="Recalcular custo agora"><span class="material-symbols-outlined">refresh</span></button></form>
+              <a class="tm-btn tm-btn--secondary tm-btn--sm" href="{% url 'catalog:variant_edit' v.obj.pk %}"><span class="material-symbols-outlined">tune</span>Editar</a>
+            </div>
+          </div>
+          <div class="tm-variant__body tm-variant__body--single">
+            <div class="tm-variant__cost">
+              <div class="tm-eyebrow">Custo unitário</div>
+              {% if v.obj.cost_cached is not None %}
+              <div class="tm-num">R$ {{ v.obj.cost_cached|brl }}</div>
+              <dl class="tm-breakdown">
+                <div><dt>Filamento</dt><dd>{{ v.breakdown.filamento|brl }}</dd></div>
+                <div><dt>Hora-máquina</dt><dd>{{ v.breakdown.hora_maquina|brl }}</dd></div>
+                <div><dt>Mão de obra <small>{{ v.obj.labor_minutes }} min</small></dt><dd>{{ v.breakdown.mao_de_obra|brl }}</dd></div>
+                {% if v.breakdown.componentes != "0.00" %}<div><dt>Componentes</dt><dd>{{ v.breakdown.componentes|brl }}</dd></div>{% endif %}
+                <div><dt>Embalagem</dt><dd>{{ v.breakdown.embalagem|brl }}</dd></div>
+                {% if v.breakdown.licenca != "0.00" %}<div><dt>Licença</dt><dd>{{ v.breakdown.licenca|brl }}</dd></div>{% endif %}
+                <div><dt>Provisão de falha</dt><dd>{{ v.breakdown.falha|brl }}</dd></div>
+              </dl>
+              {% else %}<p class="tm-muted tm-small">Ainda sem custo.</p>{% endif %}
+              <div class="tm-variant__made tm-small tm-muted">
+                {% for b in v.parts %}{{ b.quantity|floatformat:"-2" }}× {{ b.part.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% for b in v.components %}, {{ b.quantity|floatformat:"-2" }}× {{ b.component.name }}{% endfor %}
+                <br>{{ v.obj.main_filament|default:"filamento principal não escolhido" }}{% if v.obj.secondary_filament %} + {{ v.obj.secondary_filament }}{% endif %}
+              </div>
+              {% if v.problems %}
+              <ul class="tm-problems">{% for p in v.problems %}<li><span class="material-symbols-outlined">error</span>{{ p }}</li>{% endfor %}</ul>
+              {% endif %}
+            </div>
+          </div>
+        </article>
+        {% endfor %}
+        <details class="tm-card tm-newvariant"{% if not variants %} open{% endif %}>
+          <summary class="tm-card__head"><span class="material-symbols-outlined">add_circle</span><div><h3 class="tm-card__title">{% if variants %}Adicionar outra variante (tamanho ou cor){% else %}Criar a primeira variante{% endif %}</h3><p class="tm-card__sub">O SKU é gerado sozinho (SKU-base + tamanho + cor) e a composição entra com as peças do produto.</p></div><span class="material-symbols-outlined tm-newvariant__chev">expand_more</span></summary>
+          <form class="tm-card__body" method="post" action="{% url 'catalog:variant_add' product.pk %}">{% csrf_token %}
+            <div class="tm-formgrid">
+              <label class="tm-field">Tamanho (Único, P, M, G…){{ variant_form.size }}</label>
+              <label class="tm-field">Cor principal{{ variant_form.primary_color }}</label>
+              <label class="tm-field tm-span-2">Filamento da cor principal{{ variant_form.main_filament }}</label>
+              {% if has_secondary %}
+              <label class="tm-field">Cor secundária{{ variant_form.secondary_color }}</label>
+              <label class="tm-field tm-span-2">Filamento da cor secundária{{ variant_form.secondary_filament }}</label>
+              {% endif %}
+            </div>
+            <div class="tm-row tm-row--end" style="margin-top:14px"><button class="tm-btn tm-btn--primary" type="submit"><span class="material-symbols-outlined">add</span>Criar variante e calcular custo</button></div>
+          </form>
+        </details>
+      </div>
+
+    {% elif step.key == "preco" %}
+      <div class="tm-stack">
+        {% for v in variants %}
+        <article class="tm-card tm-variant tm-variant--flat" id="v{{ v.obj.pk }}">
+          <div class="tm-card__head">
+            <div class="tm-variant__id">
+              <div class="tm-variant__title">
+                {% if v.obj.primary_color.hex %}<span class="tm-swatch tm-swatch--lg" style="background:{{ v.obj.primary_color.hex }}"></span>{% endif %}
+                <span>{{ v.obj.size }}{% if v.obj.primary_color %} · {{ v.obj.primary_color.name }}{% endif %}{% if v.obj.secondary_color %} + {{ v.obj.secondary_color.name }}{% endif %}</span>
+              </div>
+              <div class="tm-mono tm-muted">{{ v.obj.sku }}</div>
+            </div>
+            <div class="tm-card__tools"><span class="tm-pill">custo R$ {{ v.obj.cost_cached|brl }}</span>{% if v.status.all_approved %}<span class="tm-pill tm-pill--ok">aprovado</span>{% endif %}</div>
+          </div>
+          <div class="tm-variant__price">{% include "costing/_price_form.html" with v=v.obj prices=v.prices all_approved=v.status.all_approved %}</div>
+        </article>
+        {% empty %}
+        <div class="tm-empty"><span class="material-symbols-outlined">sell</span>Crie uma variante antes. <a class="tm-link" href="?etapa=variantes">Ir para variantes</a></div>
         {% endfor %}
       </div>
-      {% endif %}
-      <form method="post" enctype="multipart/form-data" action="{% url 'catalog:photo_upload' product.pk %}" class="tm-upload">{% csrf_token %}
-        <label class="tm-file tm-file--wide">
-          <input type="file" name="photos" accept=".jpg,.jpeg,.png,.webp" multiple required data-tm-file>
-          <span class="material-symbols-outlined">add_photo_alternate</span><span class="tm-file__name" data-empty="Escolher fotos (pode selecionar várias)">Escolher fotos (pode selecionar várias)</span>
-        </label>
-        <button class="tm-btn {% if photos %}tm-btn--secondary{% else %}tm-btn--primary{% endif %}" type="submit"><span class="material-symbols-outlined">upload</span>Enviar fotos</button>
-      </form>
-    </div>
-  </section>
 
-  {# ---------- 6. Publicar ---------- #}
-  <section class="tm-card tm-section" id="publicar">
-    <div class="tm-card__head">
-      <span class="tm-section__n{% if steps.5.done %} is-done{% endif %}">6</span>
-      <div><h2 class="tm-card__title">Publicar</h2><p class="tm-card__sub">Produto ativo e com tudo verde entra no catálogo em PDF, na loja e no envio para o Tiny</p></div>
-    </div>
-    <div class="tm-card__body tm-publish">
-      <ul class="tm-checks">
-        {% for s in steps|slice:":5" %}<li class="{% if s.done %}is-ok{% endif %}"><span class="material-symbols-outlined">{% if s.done %}check_circle{% else %}radio_button_unchecked{% endif %}</span><a href="#{{ s.anchor }}">{{ s.title }}</a></li>{% endfor %}
-        <li class="{% if product.license_is_valid %}is-ok{% endif %}"><span class="material-symbols-outlined">{% if product.license_is_valid %}check_circle{% else %}radio_button_unchecked{% endif %}</span>Licença de venda válida</li>
-      </ul>
-      <div class="tm-publish__actions">
-        {% if product.status == 'draft' %}
-        <form method="post" action="{% url 'catalog:product_status' product.pk %}">{% csrf_token %}<input type="hidden" name="status" value="active">
-          <button class="tm-btn tm-btn--lg {% if product.ready_for_catalog %}tm-btn--primary{% else %}tm-btn--secondary{% endif %}" type="submit"><span class="material-symbols-outlined">rocket_launch</span>Ativar produto</button>
-        </form>
-        {% if not product.ready_for_catalog %}<p class="tm-small tm-muted">Pode ativar já; ele só entra no catálogo quando tudo acima estiver verde.</p>{% endif %}
-        {% else %}
-        <form method="post" action="{% url 'catalog:product_status' product.pk %}" class="tm-seg">{% csrf_token %}
-          {% for val, label in statuses %}<button class="tm-seg__btn{% if product.status == val %} is-on{% endif %}" name="status" value="{{ val }}" type="submit">{{ label }}</button>{% endfor %}
-        </form>
+    {% elif step.key == "fotos" %}
+      <div class="tm-stack">
+        {% if photos %}
+        <div class="tm-gallery">
+          {% for a in photos %}
+          <figure class="tm-gallery__item{% if a.is_main %} is-main{% endif %}">
+            {% if a.thumbnail %}<img src="{{ a.thumbnail.url }}" alt="{{ a.name }}" loading="lazy">{% elif a.file %}<img src="{{ a.file.url }}" alt="{{ a.name }}" loading="lazy">{% endif %}
+            <figcaption>
+              {% if a.is_main %}<span class="tm-pill tm-pill--ok"><span class="material-symbols-outlined tm-ico-xs">star</span>principal</span>
+              {% else %}<form method="post" action="{% url 'catalog:photo_main' a.pk %}">{% csrf_token %}<button class="tm-btn tm-btn--ghost tm-btn--sm" title="Tornar principal"><span class="material-symbols-outlined">star</span>Principal</button></form>{% endif %}
+              <form method="post" action="{% url 'catalog:asset_delete' a.pk %}" onsubmit="return confirm('Remover esta foto?')">{% csrf_token %}<button class="tm-btn tm-btn--ghost tm-btn--sm tm-btn--icon" title="Remover"><span class="material-symbols-outlined">delete</span></button></form>
+            </figcaption>
+          </figure>
+          {% endfor %}
+        </div>
         {% endif %}
-        <a class="tm-link tm-small" href="{% url 'admin:catalog_product_change' product.pk %}">Abrir no modo avançado (admin)</a>
+        <form method="post" enctype="multipart/form-data" action="{% url 'catalog:photo_upload' product.pk %}" class="tm-upload">{% csrf_token %}
+          <label class="tm-file tm-file--wide">
+            <input type="file" name="photos" accept=".jpg,.jpeg,.png,.webp" multiple required data-tm-file>
+            <span class="material-symbols-outlined">add_photo_alternate</span><span class="tm-file__name" data-empty="Escolher fotos (pode selecionar várias)">Escolher fotos (pode selecionar várias)</span>
+          </label>
+          <button class="tm-btn {% if photos %}tm-btn--secondary{% else %}tm-btn--primary{% endif %}" type="submit"><span class="material-symbols-outlined">upload</span>Enviar fotos</button>
+        </form>
       </div>
+
+    {% else %}
+      <div class="tm-publish">
+        <ul class="tm-checks">
+          {% for s in steps|slice:":5" %}<li class="{% if s.done %}is-ok{% endif %}"><span class="material-symbols-outlined">{% if s.done %}check_circle{% else %}radio_button_unchecked{% endif %}</span><a href="?etapa={{ s.key }}">{{ s.title }}</a></li>{% endfor %}
+          <li class="{% if product.license_is_valid %}is-ok{% endif %}"><span class="material-symbols-outlined">{% if product.license_is_valid %}check_circle{% else %}radio_button_unchecked{% endif %}</span>Licença de venda válida</li>
+        </ul>
+        <div class="tm-publish__actions">
+          {% if product.status == 'draft' %}
+          <form method="post" action="{% url 'catalog:product_status' product.pk %}">{% csrf_token %}<input type="hidden" name="status" value="active">
+            <button class="tm-btn tm-btn--lg {% if product.ready_for_catalog %}tm-btn--primary{% else %}tm-btn--secondary{% endif %}" type="submit"><span class="material-symbols-outlined">rocket_launch</span>Ativar produto</button>
+          </form>
+          {% if not product.ready_for_catalog %}<p class="tm-small tm-muted">Pode ativar já; ele só entra no catálogo quando tudo acima estiver verde.</p>{% endif %}
+          {% else %}
+          <form method="post" action="{% url 'catalog:product_status' product.pk %}" class="tm-seg">{% csrf_token %}
+            {% for val, label in statuses %}<button class="tm-seg__btn{% if product.status == val %} is-on{% endif %}" name="status" value="{{ val }}" type="submit">{{ label }}</button>{% endfor %}
+          </form>
+          {% endif %}
+          <a class="tm-link tm-small" href="{% url 'admin:catalog_product_change' product.pk %}">Abrir no modo avançado (admin)</a>
+        </div>
+      </div>
+    {% endif %}
+    </div>
+
+    {# ---------- Navegação ---------- #}
+    <div class="tm-wizard__nav">
+      {% if prev_step %}<a class="tm-btn tm-btn--ghost" href="?etapa={{ prev_step.key }}"><span class="material-symbols-outlined">arrow_back</span>Voltar<span class="tm-hide-sm">: {{ prev_step.title }}</span></a>{% else %}<span></span>{% endif %}
+      <span class="tm-spacer"></span>
+      {% if step.key == "dados" %}
+        <button class="tm-btn tm-btn--primary" type="submit" form="dados-form">Salvar e avançar<span class="material-symbols-outlined">arrow_forward</span></button>
+      {% elif next_in_order %}
+        {% if step.done %}
+        <a class="tm-btn tm-btn--primary" href="?etapa={{ next_in_order.key }}">Avançar<span class="tm-hide-sm">: {{ next_in_order.title }}</span><span class="material-symbols-outlined">arrow_forward</span></a>
+        {% else %}
+        <a class="tm-btn tm-btn--secondary" href="?etapa={{ next_in_order.key }}">Pular por enquanto<span class="material-symbols-outlined">arrow_forward</span></a>
+        {% endif %}
+      {% endif %}
     </div>
   </section>
 </div>

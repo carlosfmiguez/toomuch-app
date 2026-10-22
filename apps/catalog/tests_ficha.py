@@ -37,14 +37,15 @@ class FichaFlowTests(TestCase):
         resp = self.client.post(reverse("catalog:product_create"), {"name": "Sagrada Família", "category": rel.pk, "sku_base": "", "origin": "own"})
         product = Product.objects.get(name="Sagrada Família")
         self.assertTrue(product.sku_base.startswith("TM-REL-"))
-        self.assertRedirects(resp, reverse("catalog:product_detail", args=[product.pk]) + "#pecas", fetch_redirect_response=False)
+        self.assertRedirects(resp, reverse("catalog:product_detail", args=[product.pk]) + "?etapa=dados", fetch_redirect_response=False)
         part = product.parts.get()
         steps = {s.key: s.done for s in workflow.steps_for(product)}
         self.assertFalse(steps["pecas"])
 
         # ficha abre e mostra a etapa atual
         resp = self.client.get(reverse("catalog:product_detail", args=[product.pk]))
-        self.assertContains(resp, "Próximo passo")
+        self.assertContains(resp, "Etapa 2 de 6", msg_prefix="sem etapa escolhida, abre na próxima pendente")
+        self.assertNotContains(resp, "Enviar fotos", msg_prefix="só a etapa atual aparece")
 
         # 3MF fatiado direto na peça
         f = SimpleUploadedFile("conjunto.gcode.3mf", make_3mf())
@@ -117,3 +118,17 @@ class FichaFlowTests(TestCase):
         for url in (reverse("catalog:product_list"), reverse("catalog:product_create"), reverse("catalog:product_edit", args=[p.pk]),
                     reverse("catalog:product_detail", args=[p.pk]), reverse("costing:approvals")):
             self.assertEqual(self.client.get(url).status_code, 200, url)
+        for key in ("dados", "pecas", "variantes", "preco", "fotos", "publicar"):
+            resp = self.client.get(reverse("catalog:product_detail", args=[p.pk]) + f"?etapa={key}")
+            self.assertEqual(resp.status_code, 200, key)
+            self.assertContains(resp, 'aria-current="step"')
+
+    def test_dados_step_saves_and_advances(self):
+        call_command("seed_demo", verbosity=0)
+        p = Product.objects.get(sku_base="TM-LUM-SOL")
+        data = {"name": p.name, "sku_base": p.sku_base, "category": p.category_id, "short_description": "Nova descrição",
+                "lead_time_days": 5, "origin": "own", "license_cost_per_unit": "0",
+                "next": reverse("catalog:product_detail", args=[p.pk]) + "?etapa=pecas"}
+        resp = self.client.post(reverse("catalog:product_edit", args=[p.pk]), data)
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(resp["Location"].endswith("?etapa=pecas"))
