@@ -552,10 +552,12 @@ def cadastrar_produto_completo(user, base, nome, produto="", categoria="", orige
             own = list(p.parts.all())
             names = {str(x["nome"]).strip().lower() for x in pecas}
             if len(own) == 1 and own[0].name == "Peça única" and "peça única" not in names \
-                    and not own[0].assets.exists() and not own[0].shared_in.exists():
+                    and not own[0].production_assets().exists() and not own[0].shared_in.exists():
+                moved = own[0].assets.update(part=None)  # STL/3MF de projeto vão para a biblioteca do produto
                 own[0].bom_items.all().delete()
                 own[0].delete()
-                log.append("peça provisória 'Peça única' substituída")
+                log.append("peça provisória 'Peça única' substituída"
+                           + (f" ({moved} arquivo(s) movidos para a biblioteca do produto)" if moved else ""))
             for spec in pecas:
                 pname = str(spec["nome"]).strip()[:80]
                 part = p.parts.filter(name__iexact=pname).first()

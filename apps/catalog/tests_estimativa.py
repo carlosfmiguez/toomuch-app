@@ -75,7 +75,9 @@ class EstimateTests(TestCase):
 
         call = lambda name, **kw: TOOLS[name]["fn"](self.user, "https://x", **kw)  # noqa: E731
         p = Product.objects.create(sku_base="TM-PAS-CRZ", name="Cruz de Páscoa", category=Category.objects.get(code="PAS"))
-        Part.objects.create(product=p, name="Peça única")
+        placeholder = Part.objects.create(product=p, name="Peça única")
+        from .models import Asset
+        stl = Asset.objects.create(product=p, part=placeholder, kind=Asset.Kind.STL, name="cruz.stl")
         spec = dict(produto="TM-PAS-CRZ", nome="Cruz de Páscoa", altura_mm=200, colecoes=["Páscoa 2027"], pecas=[
             {"nome": "Cruz", "gramas": 47, "minutos": 101, "tamanhos": "P"},
             {"nome": "Cruz G", "gramas": 185, "minutos": 338, "tamanhos": "G"},
@@ -86,7 +88,9 @@ class EstimateTests(TestCase):
         ])
         out = call("cadastrar_produto_completo", **spec)
         self.assertFalse(out["criado"])
-        self.assertIn("peça provisória 'Peça única' substituída", out["alteracoes"])
+        self.assertIn("peça provisória 'Peça única' substituída (1 arquivo(s) movidos para a biblioteca do produto)", out["alteracoes"])
+        stl.refresh_from_db()
+        self.assertIsNone(stl.part_id)
         self.assertEqual(sorted(v["sku"] for v in out["variantes"]), ["TM-PAS-CRZ-G", "TM-PAS-CRZ-P"])
         self.assertTrue(all(v["custo"] and v["sugerido"] for v in out["variantes"]), out)
         by_sku = {v["sku"]: v for v in out["variantes"]}
