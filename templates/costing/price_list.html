@@ -1,21 +1,35 @@
-{% extends "base.html" %}
-{% block title %}Lista de preço · Sistema Toomuch{% endblock %}
+{% extends "shell.html" %}
 {% block content %}
-<div class="eyebrow">Custo e preço</div>
-<h1>Lista de preço</h1>
-<p class="muted">Preço vigente por variante e canal; entre parênteses a margem líquida. Aprovação e sobrescrita no back-office.</p>
-<div style="overflow-x:auto">
-<table>
-  <tr><th>Variante</th><th class="r">Custo</th>{% for c in channels %}<th class="r">{{ c.name }}</th>{% endfor %}</tr>
-  {% for row in rows %}
-  <tr>
-    <td><a href="{% url 'catalog:product_detail' row.variant.product_id %}">{{ row.variant.sku }}</a><div class="muted" style="font-size:12px">{{ row.variant.label }}</div></td>
-    <td class="r">{% if row.variant.cost_cached is not None %}{{ row.variant.cost_cached }}{% else %}—{% endif %}</td>
-    {% for cell in row.cells %}
-    <td class="r">{% if cell %}<strong>{{ cell.current_price }}</strong> <span class="muted">({{ cell.margin_pct }}%)</span>{% if cell.below_minimum %} <span class="pill warn">mín.</span>{% elif not cell.approved %} <span class="pill">a aprovar</span>{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>
-    {% endfor %}
-  </tr>
-  {% empty %}<tr><td colspan="{{ channels|length|add:2 }}" class="muted">Nenhuma variante.</td></tr>{% endfor %}
-</table>
+<div class="tm-page">
+  <div class="tm-head">
+    <div>
+      <div class="tm-head__eyebrow">Custo e preço</div>
+      <h1 class="tm-head__title">Lista de preço <small>{{ rows|length }} variante{{ rows|length|pluralize }}</small></h1>
+      <p class="tm-head__lead">Preço vigente por variante e canal; entre parênteses a margem líquida. Aprovação e sobrescrita em Preços por canal.</p>
+    </div>
+    <div class="tm-head__actions">
+      <a class="tm-btn tm-btn--secondary" href="{% url 'admin:costing_pricebychannel_changelist' %}"><span class="material-symbols-outlined">price_check</span>Preços por canal</a>
+      <a class="tm-btn tm-btn--primary" href="{% url 'costing:calculator' %}"><span class="material-symbols-outlined">calculate</span>Calculadora</a>
+    </div>
+  </div>
+
+  <div class="tm-card">
+    <div class="tm-card__body tm-card__body--flush tm-table-wrap">
+      <table class="tm-table">
+        <thead><tr><th>Variante</th><th class="r">Custo</th>{% for c in channels %}<th class="r">{{ c.name }}</th>{% endfor %}</tr></thead>
+        <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><a href="{% url 'catalog:product_detail' row.variant.product_id %}">{{ row.variant.sku }}</a><div class="tm-muted tm-small">{{ row.variant.label }}</div></td>
+          <td class="r">{% if row.variant.cost_cached is not None %}{{ row.variant.cost_cached }}{% else %}<span class="tm-muted">—</span>{% endif %}</td>
+          {% for cell in row.cells %}
+          <td class="r">{% if cell %}<strong>{{ cell.current_price }}</strong> <span class="tm-muted">({{ cell.margin_pct }}%)</span>{% if cell.below_minimum %} <span class="tm-pill tm-pill--warn">mín.</span>{% elif not cell.approved %} <span class="tm-pill">a aprovar</span>{% endif %}{% else %}<span class="tm-muted">—</span>{% endif %}</td>
+          {% endfor %}
+        </tr>
+        {% empty %}<tr><td colspan="{{ channels|length|add:2 }}"><div class="tm-empty"><span class="material-symbols-outlined">sell</span>Nenhuma variante.</div></td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% endblock %}

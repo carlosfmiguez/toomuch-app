@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from apps.catalog.models import Product
+from apps.core.dashboard import shell
 from apps.costing.models import Channel
 
 from . import catalog as catalog_service
@@ -27,6 +28,7 @@ def catalog_index(request):
     channel = _channel_from(request)
     doc = catalog_service.build_catalog(channel, only_ready=_only_ready(request))
     return render(request, "publishing/catalog_index.html", {
+        **shell(request, "Catálogo"),
         "doc": doc, "channels": Channel.objects.filter(status=Channel.Status.ACTIVE), "channel": channel,
         "only_ready": _only_ready(request),
         "products_total": Product.objects.filter(status__in=[Product.Status.ACTIVE, Product.Status.SEASONAL]).count(),

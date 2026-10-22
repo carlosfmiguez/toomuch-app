@@ -18,6 +18,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
+from apps.core.dashboard import shell
+
 from . import importer
 from .models import Category, Product
 
@@ -92,7 +94,7 @@ def import_upload(request):
             return redirect("catalog:import_upload")
         request.session["import_token"] = token
         return redirect("catalog:import_review")
-    return render(request, "catalog/import_upload.html", {"max_mb": MAX_ZIP_MB})
+    return render(request, "catalog/import_upload.html", {**shell(request, "Importar em lote"), "max_mb": MAX_ZIP_MB})
 
 
 @login_required
@@ -129,6 +131,7 @@ def import_review(request):
         return redirect(f"{request.build_absolute_uri('/produtos/')}?status=draft")
     existing = set(Product.objects.values_list("sku_base", flat=True))
     return render(request, "catalog/import_review.html", {
+        **shell(request, "Revisar importação"),
         "products": [{"sp": sp, "i": i, "exists": sp.sku_base in existing} for i, sp in enumerate(products)],
         "categories": Category.objects.all(), "origins": Product.Origin.choices,
     })

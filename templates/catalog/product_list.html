@@ -1,29 +1,45 @@
-{% extends "base.html" %}
-{% block title %}Produtos · Sistema Toomuch{% endblock %}
+{% extends "shell.html" %}
 {% block content %}
-<div class="eyebrow">Catálogo</div>
-<h1>Produtos</h1>
-<form method="get" style="display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin:12px 0 20px">
-  <label>Busca <input type="search" name="q" value="{{ q }}" placeholder="nome ou SKU"></label>
-  <label>Categoria <select name="categoria"><option value="">todas</option>{% for c in categories %}<option value="{{ c.code }}" {% if c.code == category %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></label>
-  <label>Status <select name="status"><option value="">todos</option>{% for v, n in statuses %}<option value="{{ v }}" {% if v == status %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
-  <button class="btn secondary" type="submit">Filtrar</button>
-  <a class="btn" href="{% url 'admin:catalog_product_add' %}">Novo produto</a>
-  <a class="btn secondary" href="{% url 'catalog:import_upload' %}">Importar em lote</a>
-</form>
-<table>
-  <tr><th></th><th>Produto</th><th>SKU-base</th><th>Categoria</th><th>Status</th><th class="r">Variantes</th><th class="r">Custo (R$)</th><th>Pronto</th></tr>
-  {% for row in products %}
-  <tr>
-    <td style="width:56px">{% if row.photo and row.photo.thumbnail %}<img src="{{ row.photo.thumbnail.url }}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:8px">{% endif %}</td>
-    <td><a href="{% url 'catalog:product_detail' row.obj.pk %}">{{ row.obj.name }}</a></td>
-    <td>{{ row.obj.sku_base }}</td>
-    <td>{{ row.obj.category }}</td>
-    <td>{{ row.obj.get_status_display }}</td>
-    <td class="r">{{ row.variants }}</td>
-    <td class="r">{% if row.cost_min is not None %}{{ row.cost_min }}{% if row.cost_max != row.cost_min %} – {{ row.cost_max }}{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>
-    <td>{% if row.ready %}<span class="pill ok">pronto</span>{% else %}<span class="pill">pendências</span>{% endif %}</td>
-  </tr>
-  {% empty %}<tr><td colspan="8" class="muted">Nenhum produto. Crie o primeiro no back-office ou rode <code>python manage.py seed_demo</code> para ver a Solaris de exemplo.</td></tr>{% endfor %}
-</table>
+<div class="tm-page">
+  <div class="tm-head">
+    <div>
+      <div class="tm-head__eyebrow">Catálogo</div>
+      <h1 class="tm-head__title">Produtos <small>{{ products|length }} na lista</small></h1>
+    </div>
+    <div class="tm-head__actions">
+      <a class="tm-btn tm-btn--secondary" href="{% url 'catalog:import_upload' %}"><span class="material-symbols-outlined">upload_file</span>Importar em lote</a>
+      <a class="tm-btn tm-btn--primary" href="{% url 'admin:catalog_product_add' %}"><span class="material-symbols-outlined">add</span>Novo produto</a>
+    </div>
+  </div>
+
+  <form method="get" class="tm-form tm-form--inline">
+    <label class="tm-field" style="min-width:220px">Busca<input type="search" name="q" value="{{ q }}" placeholder="nome ou SKU"></label>
+    <label class="tm-field">Categoria<select name="categoria"><option value="">todas</option>{% for c in categories %}<option value="{{ c.code }}" {% if c.code == category %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></label>
+    <label class="tm-field">Status<select name="status"><option value="">todos</option>{% for v, n in statuses %}<option value="{{ v }}" {% if v == status %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
+    <button class="tm-btn tm-btn--secondary" type="submit"><span class="material-symbols-outlined">filter_list</span>Filtrar</button>
+    {% if q or status or category %}<a class="tm-btn tm-btn--ghost" href="{% url 'catalog:product_list' %}">Limpar</a>{% endif %}
+  </form>
+
+  <div class="tm-card">
+    <div class="tm-card__body tm-card__body--flush tm-table-wrap">
+      <table class="tm-table">
+        <thead><tr><th></th><th>Produto</th><th>SKU-base</th><th>Categoria</th><th>Status</th><th class="r">Variantes</th><th class="r">Custo (R$)</th><th>Pronto</th></tr></thead>
+        <tbody>
+        {% for row in products %}
+        <tr>
+          <td style="width:60px">{% if row.photo and row.photo.thumbnail %}<img class="tm-thumb" src="{{ row.photo.thumbnail.url }}" alt="">{% else %}<div class="tm-thumb tm-thumb--empty"><span class="material-symbols-outlined">image</span></div>{% endif %}</td>
+          <td><a href="{% url 'catalog:product_detail' row.obj.pk %}">{{ row.obj.name }}</a></td>
+          <td class="tm-mono">{{ row.obj.sku_base }}</td>
+          <td>{{ row.obj.category }}</td>
+          <td><span class="tm-pill{% if row.obj.status == 'active' %} tm-pill--ok{% elif row.obj.status == 'seasonal' %} tm-pill--info{% endif %}">{{ row.obj.get_status_display }}</span></td>
+          <td class="r">{{ row.variants }}</td>
+          <td class="r">{% if row.cost_min is not None %}{{ row.cost_min }}{% if row.cost_max != row.cost_min %} – {{ row.cost_max }}{% endif %}{% else %}<span class="tm-muted">—</span>{% endif %}</td>
+          <td>{% if row.ready %}<span class="tm-pill tm-pill--ok">pronto</span>{% else %}<span class="tm-pill tm-pill--warn">pendências</span>{% endif %}</td>
+        </tr>
+        {% empty %}<tr><td colspan="8"><div class="tm-empty"><span class="material-symbols-outlined">deployed_code</span>Nenhum produto. Crie o primeiro ou importe uma pasta de modelos.</div></td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 {% endblock %}

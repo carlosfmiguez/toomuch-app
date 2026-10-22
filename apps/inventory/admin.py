@@ -1,17 +1,18 @@
 from django.contrib import admin, messages
 from django.utils.html import format_html
+from unfold.admin import ModelAdmin, TabularInline
 
 from .models import FilamentSKU, Purchase, Spool, StockMovement
 
 
-class SpoolInline(admin.TabularInline):
+class SpoolInline(TabularInline):
     model = Spool
     extra = 0
     fields = ("label", "lot", "initial_g", "current_g", "printer", "slot", "status")
 
 
 @admin.register(FilamentSKU)
-class FilamentSKUAdmin(admin.ModelAdmin):
+class FilamentSKUAdmin(ModelAdmin):
     list_display = ("__str__", "manufacturer", "swatch", "stock_g", "min_stock_g", "avg_cost_per_kg", "low", "active")
     list_filter = ("brand", "material", "active")
     search_fields = ("brand", "manufacturer", "material", "color_name")
@@ -36,7 +37,7 @@ class FilamentSKUAdmin(admin.ModelAdmin):
 
 
 @admin.register(Spool)
-class SpoolAdmin(admin.ModelAdmin):
+class SpoolAdmin(ModelAdmin):
     list_display = ("__str__", "status", "current_g", "initial_g", "printer", "slot", "purchased_at")
     list_filter = ("status", "printer", "filament__material")
     search_fields = ("label", "lot", "filament__brand", "filament__color_name")
@@ -44,7 +45,7 @@ class SpoolAdmin(admin.ModelAdmin):
 
 
 @admin.register(Purchase)
-class PurchaseAdmin(admin.ModelAdmin):
+class PurchaseAdmin(ModelAdmin):
     list_display = ("purchased_at", "filament", "component", "quantity", "grams_total", "total_cost", "shipping_cost", "cost_per_g", "applied")
     list_filter = ("purchased_at", "applied")
     search_fields = ("supplier", "invoice_ref", "filament__brand", "filament__color_name", "component__name")
@@ -71,7 +72,7 @@ class PurchaseAdmin(admin.ModelAdmin):
 
 
 @admin.register(StockMovement)
-class StockMovementAdmin(admin.ModelAdmin):
+class StockMovementAdmin(ModelAdmin):
     list_display = ("created_at", "kind", "filament", "component", "spool", "grams", "quantity", "print_job", "purchase", "user")
     list_filter = ("kind", "filament__material")
     search_fields = ("filament__brand", "filament__color_name", "component__name", "note")

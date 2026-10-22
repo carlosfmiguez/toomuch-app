@@ -1,24 +1,34 @@
 {% if result %}
-<div class="card">
-  <div class="eyebrow">Custo total</div>
-  <div class="num">R$ {{ result.breakdown.total }}</div>
-  <table style="margin-top:12px">
-    <tr><td>Filamento (com desperdício)</td><td class="r">{{ result.breakdown.filament|floatformat:2 }}</td></tr>
-    <tr><td>Hora-máquina ({{ result.hourly }} R$/h)</td><td class="r">{{ result.breakdown.machine|floatformat:2 }}</td></tr>
-    <tr><td>Mão de obra</td><td class="r">{{ result.breakdown.labor|floatformat:2 }}</td></tr>
-    <tr><td>Componentes</td><td class="r">{{ result.breakdown.components|floatformat:2 }}</td></tr>
-    <tr><td>Embalagem</td><td class="r">{{ result.breakdown.packaging|floatformat:2 }}</td></tr>
-    <tr><td>Licença</td><td class="r">{{ result.breakdown.license|floatformat:2 }}</td></tr>
-    <tr><td>Provisão de falha</td><td class="r">{{ result.breakdown.failure|floatformat:2 }}</td></tr>
-  </table>
-  <div class="eyebrow" style="margin-top:20px">Preço sugerido por canal</div>
-  <table>
-    <tr><th>Canal</th><th class="r">Taxa</th><th class="r">Fixo</th><th class="r">Frete</th><th class="r">Margem-alvo</th><th class="r">Preço</th><th class="r">Margem</th></tr>
-    {% for c in result.channels %}
-    <tr><td>{{ c.channel.name }}</td><td class="r">{{ c.fee.fee_pct }}%</td><td class="r">{{ c.price.fixed_fee_applied }}</td><td class="r">{{ c.price.shipping_applied }}</td><td class="r">{{ c.fee.target_margin_pct }}%</td><td class="r"><strong>R$ {{ c.price.suggested }}</strong></td><td class="r">{{ c.price.margin_pct }}%</td></tr>
-    {% empty %}<tr><td colspan="7" class="muted">Nenhum canal ativo com taxas. Cadastre em Canais.</td></tr>{% endfor %}
-  </table>
+<div class="tm-stack">
+  <div class="tm-card">
+    <div class="tm-card__head"><span class="material-symbols-outlined">payments</span><div><h2 class="tm-card__title">Custo total</h2><p class="tm-card__sub">por unidade, com desperdício e provisão de falha</p></div>
+      <div class="tm-card__tools"><span class="tm-num" style="font-size:26px">R$ {{ result.breakdown.total }}</span></div></div>
+    <div class="tm-card__body tm-card__body--flush">
+      <table class="tm-table tm-table--compact tm-table--kv">
+        <tr><td>Filamento (com desperdício)</td><td class="r">{{ result.breakdown.filament|floatformat:2 }}</td></tr>
+        <tr><td>Hora-máquina ({{ result.hourly }} R$/h)</td><td class="r">{{ result.breakdown.machine|floatformat:2 }}</td></tr>
+        <tr><td>Mão de obra</td><td class="r">{{ result.breakdown.labor|floatformat:2 }}</td></tr>
+        <tr><td>Componentes</td><td class="r">{{ result.breakdown.components|floatformat:2 }}</td></tr>
+        <tr><td>Embalagem</td><td class="r">{{ result.breakdown.packaging|floatformat:2 }}</td></tr>
+        <tr><td>Licença</td><td class="r">{{ result.breakdown.license|floatformat:2 }}</td></tr>
+        <tr><td>Provisão de falha</td><td class="r">{{ result.breakdown.failure|floatformat:2 }}</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="tm-card">
+    <div class="tm-card__head"><span class="material-symbols-outlined">sell</span><div><h2 class="tm-card__title">Preço sugerido por canal</h2><p class="tm-card__sub">arredondado para cima até ,90 · margem líquida resultante</p></div></div>
+    <div class="tm-card__body tm-card__body--flush tm-table-wrap">
+      <table class="tm-table tm-table--compact">
+        <thead><tr><th>Canal</th><th class="r">Taxa</th><th class="r">Fixo</th><th class="r">Frete</th><th class="r">Margem-alvo</th><th class="r">Preço</th><th class="r">Margem</th></tr></thead>
+        <tbody>
+        {% for c in result.channels %}
+        <tr><td>{{ c.channel.name }}</td><td class="r">{{ c.fee.fee_pct }}%</td><td class="r">{{ c.price.fixed_fee_applied }}</td><td class="r">{{ c.price.shipping_applied }}</td><td class="r">{{ c.fee.target_margin_pct }}%</td><td class="r"><strong>R$ {{ c.price.suggested }}</strong></td><td class="r">{{ c.price.margin_pct }}%</td></tr>
+        {% empty %}<tr><td colspan="7" class="tm-muted">Nenhum canal ativo com taxas. Cadastre em Canais de venda.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% else %}
-<div class="card muted">Preencha os campos e clique em Calcular. Os valores iniciais reproduzem o exemplo da Luminária Solaris da especificação.</div>
+<div class="tm-card"><div class="tm-empty"><span class="material-symbols-outlined">calculate</span>Preencha os campos e clique em Calcular.<br>Os valores iniciais reproduzem o exemplo da Luminária Solaris da especificação.</div></div>
 {% endif %}

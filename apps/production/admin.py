@@ -1,9 +1,10 @@
 from django.contrib import admin, messages
+from unfold.admin import ModelAdmin, TabularInline
 
 from .models import PrintJob, ProductionOrder
 
 
-class PrintJobInline(admin.TabularInline):
+class PrintJobInline(TabularInline):
     model = PrintJob
     extra = 0
     fields = ("part", "sequence", "printer", "filament", "spool", "est_minutes", "actual_minutes", "est_grams", "actual_grams", "result", "failure_reason")
@@ -12,7 +13,7 @@ class PrintJobInline(admin.TabularInline):
 
 
 @admin.register(ProductionOrder)
-class ProductionOrderAdmin(admin.ModelAdmin):
+class ProductionOrderAdmin(ModelAdmin):
     list_display = ("__str__", "origin", "external_id", "status", "priority", "due_date", "printer", "created_at")
     list_filter = ("status", "origin", "printer")
     search_fields = ("external_id", "variant__sku", "variant__product__name")
@@ -35,7 +36,7 @@ class ProductionOrderAdmin(admin.ModelAdmin):
 
 
 @admin.register(PrintJob)
-class PrintJobAdmin(admin.ModelAdmin):
+class PrintJobAdmin(ModelAdmin):
     list_display = ("__str__", "printer", "filament", "result", "started_at", "finished_at", "actual_minutes", "grams_used", "stock_applied")
     list_filter = ("result", "printer", "filament__material")
     search_fields = ("order__variant__sku", "part__name")

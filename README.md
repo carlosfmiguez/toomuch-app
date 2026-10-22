@@ -2,8 +2,10 @@
 
 Web app de produtos, custo, filamento, produção e catálogo da Toomuch Art, construído a partir da
 especificação *Sistema Toomuch — Guia de Referência e Especificação* (20/10/2026). Django 5 + Postgres
-(SQLite para desenvolver), admin do Django como back-office, telas próprias para painel, produtos,
-lista de preço e calculadora rápida.
+(SQLite para desenvolver), back-office sobre o [django-unfold](https://unfoldadmin.com) (menu lateral por
+área, busca global ⌃K, menu do usuário, modo escuro) com a identidade da Toomuch, e telas próprias para
+painel, produtos, produção, lista de preço, calculadora, catálogo, importação e Tiny — todas dentro do
+mesmo shell.
 
 ## O que já existe (etapas E0 a E3 do roadmap, mais parte da E5)
 
@@ -20,6 +22,7 @@ lista de preço e calculadora rápida.
 | Loja pública | `/loja/` sem login: home por categoria, página de categoria e página de produto no modelo desenhado (a luminária acende ao passar o mouse, swatches de cor, botão de WhatsApp com mensagem pronta); só produtos com checklist completo e preço do canal Site |
 | Importação em lote | Tela **Produtos → Importar em lote** (ZIP ou pasta no servidor) com revisão de nome, categoria, SKU e origem antes de criar; ou `manage.py import_folder` com planilha de mapeamento XLSX; idempotente por hash |
 
+| Interface | Shell do **django-unfold** com cores da marca (`config/unfold.py`): sidebar em grupos (Operação, Custo e preço, Estoque, Cadastros, Integrações, Administração) com contadores de pendências e impressões, busca global, avatar e menu do usuário, modo claro/escuro, login com foto de produto; painel com KPIs e alertas em `templates/admin/index.html`; telas próprias estendem `templates/shell.html`; CSS em `static/css/toomuch-admin.css`; traduções do shell em `locale/pt_BR` |
 | Tiny ERP (E7) | Tela **Tiny** no menu: cadastro do aplicativo (Client ID/Secret), conexão OAuth 2 com renovação automática do token (4 h) e do refresh (1 dia), **envio de produtos** prontos para catálogo (cria ou atualiza pelo SKU, com preço do canal escolhido, medidas, peso, fotos e estoque pronto; só reenvia o que mudou) e **importação de pedidos** nas situações configuradas (padrão 3 = Aprovada) virando ordens de produção, uma vez por pedido; `manage.py tiny_sync` para agendar |
 
 Ainda não existe: Bambu ao vivo e relatórios (E8), perfis de permissão.
@@ -36,7 +39,10 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-Abra http://127.0.0.1:8000/ (painel) e http://127.0.0.1:8000/admin/ (back-office).
+Abra http://127.0.0.1:8000/ — a raiz leva ao painel (`/admin/`), que é a home do sistema.
+
+Traduções do shell: edite `locale/pt_BR/LC_MESSAGES/django.po` e rode `python scripts/compile_messages.py`
+(o Docker e o CI já fazem isso no build; o `.mo` não vai para o git).
 
 ## Deploy no Render (push → deploy automático)
 
@@ -173,8 +179,12 @@ apps/production    ordem de produção, trabalho de impressão
 apps/publishing    publicações
 apps/files3d       leitores de 3MF/STL
 apps/integrations/tiny  cliente da API v3, OAuth, envio de produtos, pedidos → ordens, tela e comando
-apps/core          painel, seeds, testes de fluxo
-templates/         base com a identidade visual (gesso, chocolate, Fraunces + Manrope)
+apps/core          painel (dashboard.py), usuários no visual do Unfold, seeds, testes de fluxo
+config/unfold.py   shell: cores, menu lateral, badges, login
+templates/shell.html       base das telas próprias (sidebar + cabeçalho do Unfold)
+templates/admin/index.html painel (substitui o índice do admin)
+static/css/toomuch-admin.css  identidade visual sobre o Unfold (Fraunces + Manrope, componentes tm-*)
+locale/pt_BR       traduções do shell (compiladas por scripts/compile_messages.py)
 ```
 
 ## Próximos passos (roadmap)

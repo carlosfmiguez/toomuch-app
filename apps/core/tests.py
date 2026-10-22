@@ -84,11 +84,15 @@ class SeedAndFlowTests(TestCase):
 
     def test_pages_render(self):
         self.client.login(username="carlos", password="senha-forte-123")
-        for name, kwargs in (("core:dashboard", {}), ("catalog:product_list", {}),
+        self.assertRedirects(self.client.get(reverse("core:dashboard")), reverse("admin:index"))
+        for name, kwargs in (("admin:index", {}), ("catalog:product_list", {}),
                              ("catalog:product_detail", {"pk": self.variant.product_id}),
-                             ("costing:calculator", {}), ("costing:price_list", {})):
+                             ("costing:calculator", {}), ("costing:price_list", {}),
+                             ("catalog:import_upload", {}), ("production:board", {}),
+                             ("publishing:catalog_index", {}), ("tiny:status", {})):
             resp = self.client.get(reverse(name, kwargs=kwargs))
             self.assertEqual(resp.status_code, 200, name)
+            self.assertContains(resp, 'id="nav-sidebar"', msg_prefix=name)
         resp = self.client.post(reverse("costing:calculator"), {
             "grams": "270", "cost_per_kg": "95", "hours": "9", "labor_minutes": "25", "components": "18",
             "packaging": "6", "license_cost": "0", "waste_pct": "2", "failure_pct": "5",

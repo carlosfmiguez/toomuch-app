@@ -1,17 +1,18 @@
 from django.contrib import admin, messages
+from unfold.admin import ModelAdmin, TabularInline
 
 from .models import Channel, ChannelFee, GlobalParams, PriceByChannel, Printer
 from .services import approve_price
 
 
 @admin.register(GlobalParams)
-class GlobalParamsAdmin(admin.ModelAdmin):
+class GlobalParamsAdmin(ModelAdmin):
     list_display = ("effective_from", "energy_tariff_kwh", "labor_cost_per_hour", "waste_pct", "failure_pct", "simples_pct", "packaging_default_cost")
     ordering = ("-effective_from",)
 
 
 @admin.register(Printer)
-class PrinterAdmin(admin.ModelAdmin):
+class PrinterAdmin(ModelAdmin):
     list_display = ("name", "model", "status", "purchase_price", "lifetime_hours", "maintenance_per_hour", "power_w", "hourly")
     list_filter = ("status", "model")
 
@@ -20,7 +21,7 @@ class PrinterAdmin(admin.ModelAdmin):
         return obj.hourly_cost()
 
 
-class ChannelFeeInline(admin.TabularInline):
+class ChannelFeeInline(TabularInline):
     model = ChannelFee
     extra = 0
     fields = (
@@ -31,7 +32,7 @@ class ChannelFeeInline(admin.TabularInline):
 
 
 @admin.register(Channel)
-class ChannelAdmin(admin.ModelAdmin):
+class ChannelAdmin(ModelAdmin):
     list_display = ("name", "kind", "status", "price_list", "export_format", "fee_now", "margin_now", "order")
     list_filter = ("kind", "status")
     inlines = [ChannelFeeInline]
@@ -63,7 +64,7 @@ class ChannelAdmin(admin.ModelAdmin):
 
 
 @admin.register(PriceByChannel)
-class PriceByChannelAdmin(admin.ModelAdmin):
+class PriceByChannelAdmin(ModelAdmin):
     list_display = ("variant", "channel", "cost_at", "suggested_price", "current_price", "margin_pct", "below_minimum", "approved_at", "approved_by", "created_at")
     list_filter = ("channel", "below_minimum", ("approved_at", admin.EmptyFieldListFilter))
     search_fields = ("variant__sku", "variant__product__name")

@@ -49,6 +49,9 @@ for _host in filter(None, [
         CSRF_TRUSTED_ORIGINS.append(f"https://{_host}")
 
 INSTALLED_APPS = [
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -106,6 +109,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = "pt-br"
+LOCALE_PATHS = [BASE_DIR / "locale"]  # traduções do shell (Unfold)
 TIME_ZONE = env("TIME_ZONE")
 USE_I18N = True
 USE_TZ = True
@@ -157,6 +161,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Catálogo público
 TOOMUCH_WHATSAPP = env("TOOMUCH_WHATSAPP")  # só dígitos com DDI, ex.: 5548999999999
 TOOMUCH_INSTAGRAM = env("TOOMUCH_INSTAGRAM")
+
+from config.unfold import UNFOLD  # noqa: E402,F401 - shell do sistema (sidebar, busca, cores)
 
 LOGIN_URL = "/admin/login/"
 LOGIN_REDIRECT_URL = "/"

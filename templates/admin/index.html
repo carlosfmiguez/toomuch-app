@@ -1,0 +1,112 @@
+{% extends "admin/base.html" %}
+{% comment %}Painel do sistema: substitui o índice padrão do admin (lista de apps) pelos indicadores do ateliê.{% endcomment %}
+{% load i18n %}
+
+{% block title %}{{ title }} | {{ site_title|default:"Sistema Toomuch" }}{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="tm-page">
+  <div class="tm-head">
+    <div>
+      <div class="tm-head__eyebrow">Painel</div>
+      <h1 class="tm-head__title">O ateliê hoje</h1>
+      <p class="tm-head__lead">Parâmetros vigentes desde {{ params.effective_from|date:"d/m/Y" }}: energia R$ {{ params.energy_tariff_kwh }}/kWh · mão de obra R$ {{ params.labor_cost_per_hour }}/h · desperdício {{ params.waste_pct }}% · falha {{ params.failure_pct }}% · Simples {{ params.simples_pct }}% · {{ printers }} impressora{{ printers|pluralize }} · {{ channels }} canal{{ channels|pluralize:"is" }} ativo{{ channels|pluralize }}.</p>
+    </div>
+    <div class="tm-head__actions">
+      <a class="tm-btn tm-btn--secondary" href="{% url 'admin:production_productionorder_add' %}"><span class="material-symbols-outlined">assignment_add</span>Nova ordem</a>
+      <a class="tm-btn tm-btn--primary" href="{% url 'admin:catalog_product_add' %}"><span class="material-symbols-outlined">add</span>Novo produto</a>
+    </div>
+  </div>
+
+  <div class="tm-grid">
+    {% for k in kpis %}
+    <a class="tm-card tm-kpi tm-col-3{% if k.warn %} tm-kpi--warn{% endif %}" href="{{ k.url }}">
+      <div class="tm-card__body">
+        <div class="tm-kpi__label">{{ k.title }}</div>
+        <div class="tm-kpi__value">{{ k.value }}</div>
+        <div class="tm-kpi__foot">{{ k.footer }}</div>
+        <div class="tm-kpi__icon"><span class="material-symbols-outlined">{{ k.icon }}</span></div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="tm-grid">
+    <section class="tm-card tm-col-6">
+      <div class="tm-card__head">
+        <span class="material-symbols-outlined">checklist</span>
+        <div><h2 class="tm-card__title">Pendências do catálogo</h2><p class="tm-card__sub">O que falta para cada produto ficar pronto</p></div>
+        <div class="tm-card__tools">{% if pending_total %}<span class="tm-pill tm-pill--warn">{{ pending_total }}</span>{% else %}<span class="tm-pill tm-pill--ok">em dia</span>{% endif %}</div>
+      </div>
+      <div class="tm-card__body tm-card__body--flush">
+        {% if pending %}
+        <table class="tm-table tm-table--compact">
+          <thead><tr><th>O quê</th><th>Item</th></tr></thead>
+          <tbody>{% for p in pending %}<tr><td class="tm-muted">{{ p.kind }}</td><td><a href="{{ p.url }}">{{ p.label }}</a></td></tr>{% endfor %}</tbody>
+        </table>
+        {% else %}<div class="tm-empty"><span class="material-symbols-outlined">task_alt</span>Nada pendente.</div>{% endif %}
+      </div>
+      {% if pending_total > pending|length %}<div class="tm-card__foot">Mostrando {{ pending|length }} de {{ pending_total }}. <a class="tm-link" href="{% url 'catalog:product_list' %}">Ver produtos</a></div>{% endif %}
+    </section>
+
+    <section class="tm-card tm-col-6">
+      <div class="tm-card__head">
+        <span class="material-symbols-outlined">notifications_active</span>
+        <div><h2 class="tm-card__title">Estoque e margem</h2><p class="tm-card__sub">Filamento abaixo do mínimo e preços abaixo da margem</p></div>
+      </div>
+      <div class="tm-card__body tm-card__body--flush">
+        {% if low_filaments or below_margin %}
+        <table class="tm-table tm-table--compact">
+          <thead><tr><th>Alerta</th><th>Item</th><th class="r">Valor</th></tr></thead>
+          <tbody>
+            {% for f in low_filaments %}<tr><td class="tm-muted">Filamento no mínimo</td><td><a href="{% url 'admin:inventory_filamentsku_change' f.pk %}">{{ f }}</a></td><td class="r">{{ f.stock_g }} g</td></tr>{% endfor %}
+            {% for r in below_margin %}<tr><td class="tm-muted">Abaixo da margem</td><td><a href="{% url 'catalog:product_detail' r.variant.product_id %}">{{ r.variant.sku }}</a> · {{ r.channel }}</td><td class="r">{{ r.margin_pct }}%</td></tr>{% endfor %}
+          </tbody>
+        </table>
+        {% else %}<div class="tm-empty"><span class="material-symbols-outlined">inventory</span>Sem alertas.</div>{% endif %}
+      </div>
+    </section>
+  </div>
+
+  <div class="tm-grid">
+    <section class="tm-card tm-col-5">
+      <div class="tm-card__head">
+        <span class="material-symbols-outlined">print</span>
+        <div><h2 class="tm-card__title">Imprimindo agora</h2><p class="tm-card__sub">Trabalhos em andamento nas impressoras</p></div>
+        <div class="tm-card__tools"><a class="tm-btn tm-btn--ghost tm-btn--sm" href="{% url 'production:board' %}">Abrir fila</a></div>
+      </div>
+      <div class="tm-card__body tm-card__body--flush">
+        {% if printing %}
+        <table class="tm-table tm-table--compact">
+          <tbody>
+            {% for job in printing %}<tr><td><span class="tm-dot"></span></td><td><strong>{{ job.part.name }} #{{ job.sequence }}</strong><div class="tm-muted tm-small">{{ job.order.variant.product.name }} · {{ job.printer|default:"—" }}</div></td><td class="r tm-muted tm-small">desde {{ job.started_at|date:"H:i" }}</td></tr>{% endfor %}
+          </tbody>
+        </table>
+        {% else %}<div class="tm-empty"><span class="material-symbols-outlined">power_settings_new</span>Nenhuma impressora ocupada.</div>{% endif %}
+      </div>
+    </section>
+
+    <section class="tm-card tm-col-7">
+      <div class="tm-card__head">
+        <span class="material-symbols-outlined">assignment</span>
+        <div><h2 class="tm-card__title">Ordens abertas</h2><p class="tm-card__sub">Por prioridade e prazo</p></div>
+        <div class="tm-card__tools"><a class="tm-btn tm-btn--ghost tm-btn--sm" href="{% url 'admin:production_productionorder_changelist' %}">Todas</a></div>
+      </div>
+      <div class="tm-card__body tm-card__body--flush">
+        {% if open_orders %}
+        <table class="tm-table tm-table--compact">
+          <thead><tr><th>Ordem</th><th>Origem</th><th>Status</th><th>Prazo</th><th>Impressora</th></tr></thead>
+          <tbody>
+            {% for o in open_orders %}<tr><td><a href="{% url 'admin:production_productionorder_change' o.pk %}">{{ o }}</a></td><td class="tm-muted">{{ o.get_origin_display }}</td><td>{% if o.status == "printing" %}<span class="tm-pill tm-pill--live">{{ o.get_status_display }}</span>{% else %}<span class="tm-pill">{{ o.get_status_display }}</span>{% endif %}</td><td>{{ o.due_date|date:"d/m"|default:"—" }}</td><td class="tm-muted">{{ o.printer|default:"—" }}</td></tr>{% endfor %}
+          </tbody>
+        </table>
+        {% else %}<div class="tm-empty"><span class="material-symbols-outlined">assignment_turned_in</span>Nenhuma ordem aberta. <a class="tm-link" href="{% url 'admin:production_productionorder_add' %}">Abrir uma ordem</a></div>{% endif %}
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "admin/base.html" %}
+{% comment %}
+  Base das telas próprias do sistema (produtos, produção, catálogo, custo, Tiny).
+  Usa o shell do Unfold: sidebar com menu, busca, cabeçalho, menu do usuário e
+  modo escuro. As views passam o contexto do admin via apps.core.dashboard.shell().
+{% endcomment %}
+{% load i18n %}
+
+{% block title %}{{ title }} | {{ site_title|default:"Sistema Toomuch" }}{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}

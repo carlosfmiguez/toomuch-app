@@ -9,6 +9,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from apps.core.dashboard import shell
 from apps.costing.models import Channel
 
 from . import client as tiny_client
@@ -36,6 +37,7 @@ def status(request):
         messages.success(request, "Configuração salva.")
         return redirect("tiny:status")
     return render(request, "tiny/status.html", {
+        **shell(request, "Tiny ERP"),
         "conn": conn, "form": form,
         "redirect_uri": request.build_absolute_uri(reverse("tiny:callback")),
         "links": TinyProductLink.objects.select_related("variant__product").order_by("-last_pushed_at")[:20],

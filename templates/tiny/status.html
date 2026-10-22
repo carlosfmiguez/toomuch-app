@@ -1,66 +1,83 @@
-{% extends "base.html" %}
-{% block title %}Tiny ERP · Sistema Toomuch{% endblock %}
+{% extends "shell.html" %}
 {% block content %}
-<div class="eyebrow">Integrações</div>
-<h1>Tiny ERP</h1>
-<p class="muted">Produtos prontos para catálogo são enviados ao Tiny com o preço do canal escolhido; pedidos aprovados no Tiny viram ordens de produção aqui. O Tiny cuida de NF-e, estoque de acabado e marketplaces.</p>
-
-<div class="grid" style="margin:20px 0 28px">
-  <div class="card">
-    <div class="eyebrow">Conexão</div>
-    <div class="num" style="font-size:24px;margin:6px 0">{% if conn.connected %}<span class="pill ok">conectado</span>{% elif conn.status == "error" %}<span class="pill warn">erro</span>{% elif conn.configured %}<span class="pill">aguardando autorização</span>{% else %}<span class="pill">não configurado</span>{% endif %}</div>
-    {% if conn.last_error %}<div class="muted" style="font-size:12px">{{ conn.last_error }}</div>{% endif %}
-    {% if conn.access_expires_at %}<div class="muted" style="font-size:12px">token válido até {{ conn.access_expires_at|date:"d/m H:i" }} · refresh até {{ conn.refresh_expires_at|date:"d/m H:i" }}</div>{% endif %}
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
-      {% if conn.configured %}<a class="btn" href="{% url 'tiny:connect' %}">{% if conn.connected %}Reconectar{% else %}Conectar ao Tiny{% endif %}</a>{% endif %}
-      {% if conn.connected %}<form method="post" action="{% url 'tiny:disconnect' %}">{% csrf_token %}<button class="btn secondary" type="submit">Desconectar</button></form>{% endif %}
+<div class="tm-page">
+  <div class="tm-head">
+    <div>
+      <div class="tm-head__eyebrow">Integrações</div>
+      <h1 class="tm-head__title">Tiny ERP</h1>
+      <p class="tm-head__lead">Produtos prontos para catálogo são enviados ao Tiny com o preço do canal escolhido; pedidos aprovados no Tiny viram ordens de produção aqui. O Tiny cuida de NF-e, estoque de acabado e marketplaces.</p>
     </div>
   </div>
-  <div class="card">
-    <div class="eyebrow">Sincronizar agora</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
-      <form method="post" action="{% url 'tiny:push_products' %}">{% csrf_token %}<button class="btn" type="submit" {% if not conn.connected %}disabled{% endif %}>Enviar produtos</button></form>
-      <form method="post" action="{% url 'tiny:push_products' %}">{% csrf_token %}<input type="hidden" name="force" value="1"><button class="btn secondary" type="submit" {% if not conn.connected %}disabled{% endif %}>Reenviar todos</button></form>
-      <form method="post" action="{% url 'tiny:pull_orders' %}">{% csrf_token %}<button class="btn" type="submit" {% if not conn.connected %}disabled{% endif %}>Importar pedidos</button></form>
-    </div>
-    <div class="muted" style="font-size:12px;margin-top:10px">Último import de pedidos: {{ conn.last_order_sync_at|date:"d/m H:i"|default:"nunca" }}. Para rodar sozinho a cada 15 min, agende <code>python manage.py tiny_sync</code> na hospedagem (cron job).</div>
+
+  <div class="tm-grid">
+    <section class="tm-card tm-col-6">
+      <div class="tm-card__head"><span class="material-symbols-outlined">link</span><h2 class="tm-card__title">Conexão</h2>
+        <div class="tm-card__tools">{% if conn.connected %}<span class="tm-pill tm-pill--ok">conectado</span>{% elif conn.status == "error" %}<span class="tm-pill tm-pill--warn">erro</span>{% elif conn.configured %}<span class="tm-pill tm-pill--info">aguardando autorização</span>{% else %}<span class="tm-pill">não configurado</span>{% endif %}</div></div>
+      <div class="tm-card__body tm-stack">
+        {% if conn.last_error %}<div class="tm-small" style="color:#9a3a1f">{{ conn.last_error }}</div>{% endif %}
+        {% if conn.access_expires_at %}<div class="tm-muted tm-small">Token válido até {{ conn.access_expires_at|date:"d/m H:i" }} · refresh até {{ conn.refresh_expires_at|date:"d/m H:i" }}</div>{% endif %}
+        <div class="tm-row">
+          {% if conn.configured %}<a class="tm-btn tm-btn--primary" href="{% url 'tiny:connect' %}"><span class="material-symbols-outlined">login</span>{% if conn.connected %}Reconectar{% else %}Conectar ao Tiny{% endif %}</a>{% else %}<span class="tm-muted tm-small">Salve o Client ID e o Client Secret abaixo para habilitar a conexão.</span>{% endif %}
+          {% if conn.connected %}<form method="post" action="{% url 'tiny:disconnect' %}">{% csrf_token %}<button class="tm-btn tm-btn--secondary" type="submit">Desconectar</button></form>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="tm-card tm-col-6">
+      <div class="tm-card__head"><span class="material-symbols-outlined">sync</span><h2 class="tm-card__title">Sincronizar agora</h2></div>
+      <div class="tm-card__body tm-stack">
+        <div class="tm-row">
+          <form method="post" action="{% url 'tiny:push_products' %}">{% csrf_token %}<button class="tm-btn tm-btn--primary" type="submit" {% if not conn.connected %}disabled{% endif %}><span class="material-symbols-outlined">upload</span>Enviar produtos</button></form>
+          <form method="post" action="{% url 'tiny:push_products' %}">{% csrf_token %}<input type="hidden" name="force" value="1"><button class="tm-btn tm-btn--secondary" type="submit" {% if not conn.connected %}disabled{% endif %}>Reenviar todos</button></form>
+          <form method="post" action="{% url 'tiny:pull_orders' %}">{% csrf_token %}<button class="tm-btn tm-btn--primary" type="submit" {% if not conn.connected %}disabled{% endif %}><span class="material-symbols-outlined">download</span>Importar pedidos</button></form>
+        </div>
+        <div class="tm-muted tm-small">Último import de pedidos: {{ conn.last_order_sync_at|date:"d/m H:i"|default:"nunca" }}. Para rodar sozinho a cada 15 min, agende <code class="tm-code">python manage.py tiny_sync</code> na hospedagem (cron job).</div>
+      </div>
+    </section>
   </div>
-</div>
 
-<div class="cols">
-  <section>
-    <h2>Aplicativo no Tiny</h2>
-    <p class="muted" style="font-size:13px">No Tiny: <em>Configurações → Preferências gerais → Outras configurações → Aplicativos → + novo aplicativo</em>. Informe a URL de redirecionamento abaixo, marque as permissões de produtos, estoque e pedidos, salve e copie o Client ID e o Client Secret.</p>
-    <p><code style="font-size:12px;word-break:break-all">{{ redirect_uri }}</code></p>
-    <form class="stack card" method="post">
-      {% csrf_token %}
-      {% for field in form %}<label>{{ field.label }} {{ field }}{% if field.help_text %}<span class="muted" style="font-size:12px">{{ field.help_text }}</span>{% endif %}{% if field.errors %}<span class="pill warn">{{ field.errors|striptags }}</span>{% endif %}</label>{% endfor %}
-      <button class="btn secondary" type="submit">Salvar configuração</button>
-    </form>
-  </section>
-  <section>
-    <h2>Histórico</h2>
-    <table>
-      <tr><th>Quando</th><th>O quê</th><th>Resultado</th></tr>
-      {% for log in logs %}<tr><td>{{ log.created_at|date:"d/m H:i" }}</td><td>{{ log.get_kind_display }}</td><td>{% if log.ok %}<span class="pill ok">ok</span>{% else %}<span class="pill warn">erro</span>{% endif %} {{ log.summary }}</td></tr>{% empty %}<tr><td colspan="3" class="muted">Nada ainda.</td></tr>{% endfor %}
-    </table>
-  </section>
-</div>
+  <div class="tm-grid">
+    <section class="tm-card tm-col-6">
+      <div class="tm-card__head"><span class="material-symbols-outlined">key</span><div><h2 class="tm-card__title">Aplicativo no Tiny</h2><p class="tm-card__sub">Credenciais OAuth e opções de sincronização</p></div></div>
+      <form class="tm-card__body tm-form" method="post">
+        {% csrf_token %}
+        <div class="tm-muted tm-small">No Tiny: <em>Configurações → Preferências gerais → Outras configurações → Aplicativos → + novo aplicativo</em>. Informe a URL de redirecionamento abaixo, marque as permissões de produtos, estoque e pedidos, salve e copie o Client ID e o Client Secret.</div>
+        <div><span class="tm-eyebrow">URL de redirecionamento</span><code class="tm-code">{{ redirect_uri }}</code></div>
+        {% for field in form %}<label class="tm-field">{{ field.label }} {{ field }}{% if field.help_text %}<span class="tm-field__help">{{ field.help_text }}</span>{% endif %}{% if field.errors %}<span class="tm-field__error">{{ field.errors|striptags }}</span>{% endif %}</label>{% endfor %}
+        <div class="tm-row"><button class="tm-btn tm-btn--secondary" type="submit"><span class="material-symbols-outlined">save</span>Salvar configuração</button></div>
+      </form>
+    </section>
 
-<div class="cols" style="margin-top:32px">
-  <section>
-    <h2>Pedidos importados</h2>
-    <table>
-      <tr><th>Pedido</th><th>Canal</th><th>Cliente</th><th>Resultado</th><th>Ordens</th></tr>
-      {% for o in orders %}<tr><td>{{ o.numero_pedido|default:o.tiny_order_id }}</td><td>{{ o.canal }}</td><td>{{ o.cliente }}</td><td>{{ o.get_result_display }}<div class="muted" style="font-size:12px">{{ o.detail }}</div></td><td>{% for po in o.orders.all %}<a href="{% url 'admin:production_productionorder_change' po.pk %}">OP-{{ po.pk }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</td></tr>{% empty %}<tr><td colspan="5" class="muted">Nenhum pedido importado ainda.</td></tr>{% endfor %}
-    </table>
-  </section>
-  <section>
-    <h2>Produtos enviados</h2>
-    <table>
-      <tr><th>SKU</th><th>Id no Tiny</th><th class="r">Preço</th><th>Último envio</th></tr>
-      {% for l in links %}<tr><td>{{ l.variant.sku }}</td><td>{{ l.tiny_id }}</td><td class="r">{{ l.last_price|default:"—" }}</td><td>{{ l.last_pushed_at|date:"d/m H:i"|default:"—" }}{% if l.last_error %}<div><span class="pill warn">{{ l.last_error|truncatechars:60 }}</span></div>{% endif %}</td></tr>{% empty %}<tr><td colspan="4" class="muted">Nenhum produto enviado ainda.</td></tr>{% endfor %}
-    </table>
-  </section>
+    <section class="tm-card tm-col-6">
+      <div class="tm-card__head"><span class="material-symbols-outlined">history</span><h2 class="tm-card__title">Histórico</h2></div>
+      <div class="tm-card__body tm-card__body--flush tm-table-wrap">
+        <table class="tm-table tm-table--compact">
+          <thead><tr><th>Quando</th><th>O quê</th><th>Resultado</th></tr></thead>
+          <tbody>{% for log in logs %}<tr><td class="tm-muted tm-small">{{ log.created_at|date:"d/m H:i" }}</td><td>{{ log.get_kind_display }}</td><td>{% if log.ok %}<span class="tm-pill tm-pill--ok">ok</span>{% else %}<span class="tm-pill tm-pill--warn">erro</span>{% endif %} <span class="tm-small">{{ log.summary }}</span></td></tr>{% empty %}<tr><td colspan="3"><div class="tm-empty"><span class="material-symbols-outlined">history</span>Nada ainda.</div></td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="tm-grid">
+    <section class="tm-card tm-col-6">
+      <div class="tm-card__head"><span class="material-symbols-outlined">shopping_bag</span><h2 class="tm-card__title">Pedidos importados</h2></div>
+      <div class="tm-card__body tm-card__body--flush tm-table-wrap">
+        <table class="tm-table tm-table--compact">
+          <thead><tr><th>Pedido</th><th>Canal</th><th>Cliente</th><th>Resultado</th><th>Ordens</th></tr></thead>
+          <tbody>{% for o in orders %}<tr><td>{{ o.numero_pedido|default:o.tiny_order_id }}</td><td>{{ o.canal }}</td><td>{{ o.cliente }}</td><td>{{ o.get_result_display }}<div class="tm-muted tm-small">{{ o.detail }}</div></td><td>{% for po in o.orders.all %}<a href="{% url 'admin:production_productionorder_change' po.pk %}">OP-{{ po.pk }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</td></tr>{% empty %}<tr><td colspan="5"><div class="tm-empty"><span class="material-symbols-outlined">shopping_bag</span>Nenhum pedido importado ainda.</div></td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+    </section>
+    <section class="tm-card tm-col-6">
+      <div class="tm-card__head"><span class="material-symbols-outlined">inventory_2</span><h2 class="tm-card__title">Produtos enviados</h2></div>
+      <div class="tm-card__body tm-card__body--flush tm-table-wrap">
+        <table class="tm-table tm-table--compact">
+          <thead><tr><th>SKU</th><th>Id no Tiny</th><th class="r">Preço</th><th>Último envio</th></tr></thead>
+          <tbody>{% for l in links %}<tr><td class="tm-mono">{{ l.variant.sku }}</td><td>{{ l.tiny_id }}</td><td class="r">{{ l.last_price|default:"—" }}</td><td class="tm-small">{{ l.last_pushed_at|date:"d/m H:i"|default:"—" }}{% if l.last_error %}<div><span class="tm-pill tm-pill--warn">{{ l.last_error|truncatechars:60 }}</span></div>{% endif %}</td></tr>{% empty %}<tr><td colspan="4"><div class="tm-empty"><span class="material-symbols-outlined">inventory_2</span>Nenhum produto enviado ainda.</div></td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+    </section>
+  </div>
 </div>
 {% endblock %}

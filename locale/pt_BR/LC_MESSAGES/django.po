@@ -1,0 +1,268 @@
+# Traduções do shell (django-unfold) para o Sistema Toomuch.
+# O Django já traduz as mensagens do admin padrão; aqui entram só as do Unfold.
+# Compilar: python manage.py compilemessages (ou scripts/compile_messages.py sem gettext).
+msgid ""
+msgstr ""
+"Project-Id-Version: toomuch\n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "Search apps and models..."
+msgstr "Buscar telas e cadastros..."
+
+msgid "Welcome back to"
+msgstr "Bem-vindo de volta ao"
+
+msgid "Welcome"
+msgstr "Bem-vindo"
+
+msgid "All applications"
+msgstr "Todos os cadastros"
+
+msgid "Apply Filters"
+msgstr "Aplicar filtros"
+
+msgid "Clear all filters"
+msgstr "Limpar todos os filtros"
+
+msgid "Reset filters"
+msgstr "Limpar filtros"
+
+msgid "Filters"
+msgstr "Filtros"
+
+msgid "Toggle filter"
+msgstr "Mostrar ou ocultar filtros"
+
+msgid "Toggle sidebar"
+msgstr "Mostrar ou ocultar o menu"
+
+msgid "Toggle dark/light mode"
+msgstr "Alternar modo claro/escuro"
+
+msgid "Toggle password visibility"
+msgstr "Mostrar ou ocultar a senha"
+
+msgid "Toggle sorting"
+msgstr "Alternar ordenação"
+
+msgid "Remove from sorting"
+msgstr "Remover da ordenação"
+
+msgid "Dark"
+msgstr "Escuro"
+
+msgid "Light"
+msgstr "Claro"
+
+msgid "System"
+msgstr "Sistema"
+
+msgid "No data"
+msgstr "Sem dados"
+
+msgid "No results found"
+msgstr "Nenhum resultado"
+
+msgid "Nothing matched your search"
+msgstr "Nada corresponde à sua busca"
+
+msgid "This page yielded into no results."
+msgstr "Esta página não trouxe resultados."
+
+msgid "Type to search"
+msgstr "Digite para buscar"
+
+msgid "Recent searches"
+msgstr "Buscas recentes"
+
+msgid "Open command tool"
+msgstr "Abrir a busca global"
+
+msgid "Command tool shortcuts"
+msgstr "Atalhos da busca global"
+
+msgid "Available shortcuts"
+msgstr "Atalhos disponíveis"
+
+msgid "Global shortcuts"
+msgstr "Atalhos gerais"
+
+msgid "Changelist shortcuts"
+msgstr "Atalhos da lista"
+
+msgid "Open shortcuts list"
+msgstr "Abrir a lista de atalhos"
+
+msgid "Navigate"
+msgstr "Navegar"
+
+msgid "Open selection"
+msgstr "Abrir seleção"
+
+msgid "Open selection in new tab"
+msgstr "Abrir seleção em nova aba"
+
+msgid "Select"
+msgstr "Selecionar"
+
+msgid "Run"
+msgstr "Executar"
+
+msgid "Create new record"
+msgstr "Criar novo registro"
+
+msgid "Record picture"
+msgstr "Imagem do registro"
+
+msgid "Image preview"
+msgstr "Pré-visualização"
+
+msgid "Choose file to upload"
+msgstr "Escolher arquivo"
+
+msgid "Click to download"
+msgstr "Clique para baixar"
+
+msgid "Click to cancel"
+msgstr "Clique para cancelar"
+
+msgid "Close"
+msgstr "Fechar"
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "Submit"
+msgstr "Enviar"
+
+msgid "Next"
+msgstr "Próximo"
+
+msgid "Previous"
+msgstr "Anterior"
+
+msgid "Add row"
+msgstr "Adicionar linha"
+
+msgid "General"
+msgstr "Geral"
+
+msgid "Show counts"
+msgstr "Mostrar contagens"
+
+msgid "Hide counts"
+msgstr "Ocultar contagens"
+
+msgid "Return to site"
+msgstr "Voltar ao site"
+
+msgid "Save and view"
+msgstr "Salvar e visualizar"
+
+msgid "This item will be deleted."
+msgstr "Este item será excluído."
+
+msgid "True"
+msgstr "Sim"
+
+msgid "False"
+msgstr "Não"
+
+msgid "Unknown"
+msgstr "Desconhecido"
+
+msgid "Clear"
+msgstr "Limpar"
+
+msgid "Date"
+msgstr "Data"
+
+msgid "Date from"
+msgstr "Data inicial"
+
+msgid "Date to"
+msgstr "Data final"
+
+msgid "From"
+msgstr "De"
+
+msgid "To"
+msgstr "Até"
+
+msgid "Time"
+msgstr "Hora"
+
+msgid "Value"
+msgstr "Valor"
+
+msgid "Select action"
+msgstr "Selecione a ação"
+
+msgid "Select action to run"
+msgstr "Selecione a ação a executar"
+
+msgid "Select currency"
+msgstr "Selecione a moeda"
+
+msgid "Select record"
+msgstr "Selecione o registro"
+
+msgid "Select value"
+msgstr "Selecione o valor"
+
+msgid "Dataset not found. No action performed."
+msgstr "Conjunto de dados não encontrado. Nenhuma ação executada."
+
+msgid "You have been successfully logged out from the administration"
+msgstr "Você saiu do sistema"
+
+msgid "Log in"
+msgstr "Entrar"
+
+msgid "Log out"
+msgstr "Sair"
+
+msgid "Change password"
+msgstr "Alterar senha"
+
+msgid "View site"
+msgstr "Ver a loja"
+
+msgid "Recent actions"
+msgstr "Ações recentes"
+
+msgid "Objects"
+msgstr "Registros"
+
+msgid "Sorting priority: %(priority_number)s"
+msgstr "Prioridade de ordenação: %(priority_number)s"
+
+msgid "%(counter)s result"
+msgid_plural "%(counter)s results"
+msgstr[0] "%(counter)s resultado"
+msgstr[1] "%(counter)s resultados"
+
+msgid "%(full_result_count)s total"
+msgstr "%(full_result_count)s no total"
+
+msgid "Add %(name)s"
+msgstr "Adicionar %(name)s"
+
+msgid "Models in the %(name)s application"
+msgstr "Cadastros de %(name)s"
+
+msgid "Change selected %(model)s"
+msgstr "Alterar %(model)s selecionado"
+
+msgid "Add another %(model)s"
+msgstr "Adicionar outro %(model)s"
+
+msgid "View selected %(model)s"
+msgstr "Ver %(model)s selecionado"
+
+msgid "Delete selected %(model)s"
+msgstr "Excluir %(model)s selecionado"

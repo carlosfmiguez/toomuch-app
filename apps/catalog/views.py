@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.core.dashboard import shell
 from apps.costing.services import compute_prices, compute_variant_cost, latest_prices
 
 from .models import Asset, Category, Product, Variant
@@ -29,6 +30,7 @@ def product_list(request):
             "cost_max": max(costs) if costs else None, "photo": p.main_photo, "ready": p.ready_for_catalog,
         })
     return render(request, "catalog/product_list.html", {
+        **shell(request, "Produtos"),
         "products": products, "categories": Category.objects.all(), "statuses": Product.Status.choices,
         "q": q, "status": status, "category": category,
     })
@@ -45,6 +47,7 @@ def product_detail(request, pk):
         parts.append({"obj": part, "files": part.assets.filter(kind__in=[Asset.Kind.THREEMF_SLICED, Asset.Kind.STL, Asset.Kind.STEP, Asset.Kind.F3D, Asset.Kind.THREEMF_PROJECT])})
     photos = product.assets.filter(kind__in=[Asset.Kind.PHOTO, Asset.Kind.RENDER]).order_by("-is_main", "order")
     return render(request, "catalog/product_detail.html", {
+        **shell(request, product.name),
         "product": product, "variants": variants, "parts": parts, "photos": photos,
         "checklist": product.catalog_checklist(),
     })

@@ -1,17 +1,27 @@
-{% extends "base.html" %}
-{% block title %}Calculadora rápida · Sistema Toomuch{% endblock %}
+{% extends "shell.html" %}
 {% block content %}
-<div class="eyebrow">Custo e preço</div>
-<h1>Calculadora rápida</h1>
-<p class="muted">Orce uma peça sem cadastrar nada. Usa os parâmetros vigentes (energia R$ {{ params.energy_tariff_kwh }}/kWh, mão de obra R$ {{ params.labor_cost_per_hour }}/h, Simples {{ params.simples_pct }}%) e as taxas atuais de cada canal.</p>
-<div class="cols">
-  <form class="stack card" method="post" hx-post="{% url 'costing:calculator' %}" hx-target="#resultado" hx-swap="innerHTML">
-    {% csrf_token %}
-    {% for field in form %}
-      <label>{{ field.label }} {{ field }}{% if field.errors %}<span class="pill warn">{{ field.errors|striptags }}</span>{% endif %}</label>
-    {% endfor %}
-    <button class="btn" type="submit">Calcular</button>
-  </form>
-  <div id="resultado">{% include "costing/_calculator_result.html" %}</div>
+<div class="tm-page">
+  <div class="tm-head">
+    <div>
+      <div class="tm-head__eyebrow">Custo e preço</div>
+      <h1 class="tm-head__title">Calculadora rápida</h1>
+      <p class="tm-head__lead">Orce uma peça sem cadastrar nada. Usa os parâmetros vigentes (energia R$ {{ params.energy_tariff_kwh }}/kWh, mão de obra R$ {{ params.labor_cost_per_hour }}/h, Simples {{ params.simples_pct }}%) e as taxas atuais de cada canal.</p>
+    </div>
+    <div class="tm-head__actions"><a class="tm-btn tm-btn--ghost" href="{% url 'admin:costing_globalparams_changelist' %}"><span class="material-symbols-outlined">tune</span>Parâmetros</a></div>
+  </div>
+
+  <div class="tm-grid">
+    <section class="tm-card tm-col-5">
+      <div class="tm-card__head"><span class="material-symbols-outlined">calculate</span><h2 class="tm-card__title">Dados da peça</h2></div>
+      <form class="tm-card__body tm-form" method="post" hx-post="{% url 'costing:calculator' %}" hx-target="#resultado" hx-swap="innerHTML">
+        {% csrf_token %}
+        {% for field in form %}
+          <label class="tm-field">{{ field.label }} {{ field }}{% if field.help_text %}<span class="tm-field__help">{{ field.help_text }}</span>{% endif %}{% if field.errors %}<span class="tm-field__error">{{ field.errors|striptags }}</span>{% endif %}</label>
+        {% endfor %}
+        <div class="tm-row"><button class="tm-btn tm-btn--primary tm-btn--lg" type="submit"><span class="material-symbols-outlined">play_arrow</span>Calcular</button></div>
+      </form>
+    </section>
+    <div class="tm-col-7" id="resultado">{% include "costing/_calculator_result.html" %}</div>
+  </div>
 </div>
 {% endblock %}

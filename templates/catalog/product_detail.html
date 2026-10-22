@@ -1,91 +1,133 @@
-{% extends "base.html" %}
-{% block title %}{{ product.name }} · Sistema Toomuch{% endblock %}
+{% extends "shell.html" %}
 {% block content %}
-<div class="eyebrow">{{ product.category }} · {{ product.get_status_display }} · {{ product.get_origin_display }}</div>
-<h1>{{ product.name }} <span class="muted" style="font-size:20px;font-family:Manrope;font-weight:400">{{ product.sku_base }}</span></h1>
-<p class="muted">{{ product.short_description }}</p>
-<p><a class="btn secondary" href="{% url 'admin:catalog_product_change' product.pk %}">Editar no back-office</a></p>
-
-<div class="cols" style="margin-top:20px">
-  <section>
-    <h2>Pronto para o catálogo?</h2>
-    <table>
-      {% for label, ok in checklist %}<tr><td>{{ label }}</td><td>{% if ok %}<span class="pill ok">ok</span>{% else %}<span class="pill warn">falta</span>{% endif %}</td></tr>{% endfor %}
-    </table>
-    <h2 style="margin-top:24px">Medidas</h2>
-    <p>{{ product.height_mm|default:"—" }} × {{ product.width_mm|default:"—" }} × {{ product.depth_mm|default:"—" }} mm · {{ product.weight_g|default:"—" }} g · {{ product.lead_time_days }} dias úteis</p>
-    {% if product.origin != "own" %}<p class="muted">Licença: {{ product.license_author }} · {{ product.license_terms }} {% if product.license_cost_per_unit %}· R$ {{ product.license_cost_per_unit }} por unidade{% endif %}</p>{% endif %}
-  </section>
-  <section>
-    <h2>Fotos</h2>
-    <div style="display:flex;flex-wrap:wrap;gap:10px">
-      {% for a in photos %}{% if a.thumbnail %}<img src="{{ a.thumbnail.url }}" alt="{{ a.name }}" style="width:140px;height:175px;object-fit:cover;border-radius:10px">{% endif %}{% empty %}<span class="muted">Nenhuma foto. Suba fotos pelo back-office (tipo Foto).</span>{% endfor %}
+<div class="tm-page">
+  <div class="tm-head">
+    <div>
+      <div class="tm-head__eyebrow">{{ product.category }} · {{ product.get_status_display }} · {{ product.get_origin_display }}</div>
+      <h1 class="tm-head__title">{{ product.name }} <small class="tm-mono">{{ product.sku_base }}</small></h1>
+      {% if product.short_description %}<p class="tm-head__lead">{{ product.short_description }}</p>{% endif %}
     </div>
-  </section>
-</div>
-
-<section style="margin-top:32px">
-  <h2>Peças impressas</h2>
-  <table>
-    <tr><th>Peça</th><th>Qtd</th><th>Slot</th><th>Arquivos</th><th class="r">Gramas</th><th class="r">Tempo</th></tr>
-    {% for row in parts %}
-    <tr>
-      <td><a href="{% url 'admin:catalog_part_change' row.obj.pk %}">{{ row.obj.name }}</a></td>
-      <td>{{ row.obj.default_qty }}</td>
-      <td>{{ row.obj.get_color_slot_display }}</td>
-      <td>{% for f in row.files %}<div>{{ f.get_kind_display }} · {{ f.name }}{% if f.printer %} · {{ f.printer.name }}{% endif %}{% if f.is_production %} <span class="pill ok">produção</span>{% endif %}{% if f.parse_error %} <span class="pill warn">{{ f.parse_error }}</span>{% endif %}</div>{% empty %}<span class="muted">sem arquivos</span>{% endfor %}</td>
-      <td class="r">{% for f in row.files %}{% if f.grams_total %}<div>{{ f.grams_total }} g</div>{% endif %}{% endfor %}</td>
-      <td class="r">{% for f in row.files %}{% if f.print_time_min %}<div>{{ f.print_time_min }} min</div>{% endif %}{% endfor %}</td>
-    </tr>
-    {% empty %}<tr><td colspan="6" class="muted">Nenhuma peça cadastrada.</td></tr>{% endfor %}
-  </table>
-</section>
-
-<section style="margin-top:32px">
-  <h2>Variantes, custo e preço</h2>
-  {% for row in variants %}
-  <div class="card" style="margin-bottom:16px">
-    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px">
-      <h3>{{ row.obj.sku }} <span class="muted" style="font-weight:400;font-family:Manrope;font-size:14px">{{ row.obj.size }}{% if row.obj.primary_color %} · {% if row.obj.primary_color.hex %}<span class="swatch" style="background:{{ row.obj.primary_color.hex }}"></span>{% endif %}{{ row.obj.primary_color.name }}{% endif %}</span></h3>
-      <form method="post" action="{% url 'catalog:variant_recalculate' row.obj.pk %}">{% csrf_token %}<button class="btn secondary" type="submit">Recalcular custo e preços</button></form>
-    </div>
-    <div class="cols">
-      <div>
-        <div class="eyebrow">Composição</div>
-        <table>
-          {% for item in row.bom %}<tr><td>{{ item.quantity }} ×</td><td>{{ item.part|default:item.component }}</td><td class="muted">{{ item.get_kind_display }}{% if item.kind == "part" %} · {{ item.effective_slot }}{% endif %}</td></tr>{% empty %}<tr><td class="muted" colspan="3">Sem itens de composição.</td></tr>{% endfor %}
-        </table>
-        <p class="muted" style="margin-top:8px">Filamentos: principal {{ row.obj.main_filament|default:"—" }}{% if row.obj.secondary_filament %} · secundário {{ row.obj.secondary_filament }}{% endif %} · mão de obra {{ row.obj.labor_minutes }} min</p>
-      </div>
-      <div>
-        <div class="eyebrow">Custo</div>
-        {% if row.obj.cost_cached is not None %}
-        <div class="num">R$ {{ row.obj.cost_cached }}</div>
-        <table style="margin-top:8px">
-          <tr><td>Filamento</td><td class="r">{{ row.obj.cost_breakdown.filamento }}</td></tr>
-          <tr><td>Hora-máquina</td><td class="r">{{ row.obj.cost_breakdown.hora_maquina }}</td></tr>
-          <tr><td>Mão de obra</td><td class="r">{{ row.obj.cost_breakdown.mao_de_obra }}</td></tr>
-          <tr><td>Componentes</td><td class="r">{{ row.obj.cost_breakdown.componentes }}</td></tr>
-          <tr><td>Embalagem</td><td class="r">{{ row.obj.cost_breakdown.embalagem }}</td></tr>
-          <tr><td>Licença</td><td class="r">{{ row.obj.cost_breakdown.licenca }}</td></tr>
-          <tr><td>Provisão de falha</td><td class="r">{{ row.obj.cost_breakdown.falha }}</td></tr>
-        </table>
-        {% for p in row.obj.cost_breakdown.problemas %}<p class="pill warn" style="margin-top:8px">{{ p }}</p>{% endfor %}
-        <p class="muted" style="font-size:12px">Calculado em {{ row.obj.cost_cached_at|date:"d/m/Y H:i" }}</p>
-        {% else %}<p class="muted">Ainda sem custo. Clique em recalcular.</p>{% endif %}
-      </div>
-      <div>
-        <div class="eyebrow">Preço por canal</div>
-        <table>
-          <tr><th>Canal</th><th class="r">Sugerido</th><th class="r">Vigente</th><th class="r">Margem</th><th></th></tr>
-          {% for pr in row.prices %}
-          <tr><td>{{ pr.channel }}</td><td class="r">{{ pr.suggested_price }}</td><td class="r">{{ pr.current_price }}</td><td class="r">{{ pr.margin_pct }}%</td><td>{% if pr.below_minimum %}<span class="pill warn">abaixo do mín.</span>{% elif pr.approved %}<span class="pill ok">aprovado</span>{% else %}<span class="pill">a aprovar</span>{% endif %}</td></tr>
-          {% empty %}<tr><td colspan="5" class="muted">Sem preços ainda.</td></tr>{% endfor %}
-        </table>
-        <p style="margin-top:8px"><a href="{% url 'admin:costing_pricebychannel_changelist' %}?variant__id__exact={{ row.obj.pk }}">Aprovar preços no back-office</a></p>
-      </div>
+    <div class="tm-head__actions">
+      {% if product.ready_for_catalog %}<a class="tm-btn tm-btn--ghost" href="{% url 'public:product' product.sku_base %}" target="_blank"><span class="material-symbols-outlined">storefront</span>Ver na loja</a>{% endif %}
+      <a class="tm-btn tm-btn--primary" href="{% url 'admin:catalog_product_change' product.pk %}"><span class="material-symbols-outlined">edit</span>Editar</a>
     </div>
   </div>
-  {% empty %}<p class="muted">Nenhuma variante. <a href="{% url 'admin:catalog_variant_add' %}">Criar variante</a></p>{% endfor %}
-</section>
+
+  <div class="tm-grid">
+    <section class="tm-card tm-col-4">
+      <div class="tm-card__head"><span class="material-symbols-outlined">checklist</span><h2 class="tm-card__title">Pronto para o catálogo?</h2>
+        <div class="tm-card__tools">{% if product.ready_for_catalog %}<span class="tm-pill tm-pill--ok">pronto</span>{% else %}<span class="tm-pill tm-pill--warn">pendências</span>{% endif %}</div></div>
+      <div class="tm-card__body" style="padding-top:4px;padding-bottom:4px">
+        {% for label, ok in checklist %}<div class="tm-check {% if ok %}tm-check--ok{% else %}tm-check--no{% endif %}"><span class="material-symbols-outlined">{% if ok %}check_circle{% else %}cancel{% endif %}</span>{{ label }}</div>{% endfor %}
+      </div>
+    </section>
+
+    <section class="tm-card tm-col-4">
+      <div class="tm-card__head"><span class="material-symbols-outlined">straighten</span><h2 class="tm-card__title">Medidas e prazo</h2></div>
+      <div class="tm-card__body tm-card__body--flush">
+        <table class="tm-table tm-table--compact tm-table--kv">
+          <tr><td>Altura × largura × profundidade</td><td class="r">{{ product.height_mm|default:"—" }} × {{ product.width_mm|default:"—" }} × {{ product.depth_mm|default:"—" }} mm</td></tr>
+          <tr><td>Peso</td><td class="r">{{ product.weight_g|default:"—" }} g</td></tr>
+          <tr><td>Prazo de produção</td><td class="r">{{ product.lead_time_days }} dias úteis</td></tr>
+          {% if product.origin != "own" %}<tr><td>Licença</td><td class="r">{{ product.license_author|default:"—" }} · {{ product.license_terms|default:"—" }}{% if product.license_cost_per_unit %} · R$ {{ product.license_cost_per_unit }}/un.{% endif %}</td></tr>{% endif %}
+        </table>
+      </div>
+    </section>
+
+    <section class="tm-card tm-col-4">
+      <div class="tm-card__head"><span class="material-symbols-outlined">photo_library</span><h2 class="tm-card__title">Fotos</h2>
+        <div class="tm-card__tools"><a class="tm-btn tm-btn--ghost tm-btn--sm" href="{% url 'admin:catalog_asset_add' %}?product={{ product.pk }}&kind=photo">Adicionar</a></div></div>
+      <div class="tm-card__body">
+        <div class="tm-photos">
+          {% for a in photos %}{% if a.thumbnail %}<img class="tm-thumb tm-thumb--lg" src="{{ a.thumbnail.url }}" alt="{{ a.name }}">{% endif %}{% empty %}<span class="tm-muted tm-small">Nenhuma foto ainda. Suba fotos no cadastro (tipo Foto).</span>{% endfor %}
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="tm-card">
+    <div class="tm-card__head"><span class="material-symbols-outlined">view_in_ar</span><div><h2 class="tm-card__title">Peças impressas</h2><p class="tm-card__sub">Arquivos de cada peça; o 3MF fatiado marcado como produção alimenta o custo</p></div>
+      <div class="tm-card__tools"><a class="tm-btn tm-btn--ghost tm-btn--sm" href="{% url 'admin:catalog_part_add' %}?product={{ product.pk }}">Nova peça</a></div></div>
+    <div class="tm-card__body tm-card__body--flush tm-table-wrap">
+      <table class="tm-table">
+        <thead><tr><th>Peça</th><th class="r">Qtd</th><th>Slot de cor</th><th>Arquivos</th><th class="r">Gramas</th><th class="r">Tempo</th></tr></thead>
+        <tbody>
+        {% for row in parts %}
+        <tr>
+          <td><a href="{% url 'admin:catalog_part_change' row.obj.pk %}">{{ row.obj.name }}</a></td>
+          <td class="r">{{ row.obj.default_qty }}</td>
+          <td>{{ row.obj.get_color_slot_display }}</td>
+          <td>{% for f in row.files %}<div class="tm-small">{{ f.get_kind_display }} · {{ f.name }}{% if f.printer %} · {{ f.printer.name }}{% endif %}{% if f.is_production %} <span class="tm-pill tm-pill--ok">produção</span>{% endif %}{% if f.parse_error %} <span class="tm-pill tm-pill--warn">{{ f.parse_error|truncatechars:50 }}</span>{% endif %}</div>{% empty %}<span class="tm-pill tm-pill--warn">sem arquivos</span>{% endfor %}</td>
+          <td class="r">{% for f in row.files %}{% if f.grams_total %}<div class="tm-small">{{ f.grams_total }} g</div>{% endif %}{% endfor %}</td>
+          <td class="r">{% for f in row.files %}{% if f.print_time_min %}<div class="tm-small">{{ f.print_time_min }} min</div>{% endif %}{% endfor %}</td>
+        </tr>
+        {% empty %}<tr><td colspan="6"><div class="tm-empty"><span class="material-symbols-outlined">view_in_ar</span>Nenhuma peça cadastrada.</div></td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="tm-head" style="margin-top:8px">
+    <div><div class="tm-head__eyebrow">Variantes</div><h2 class="tm-head__title" style="font-size:22px">Custo e preço por variante</h2></div>
+    <div class="tm-head__actions"><a class="tm-btn tm-btn--secondary" href="{% url 'admin:catalog_variant_add' %}?product={{ product.pk }}"><span class="material-symbols-outlined">add</span>Nova variante</a></div>
+  </div>
+
+  {% for row in variants %}
+  <section class="tm-card">
+    <div class="tm-card__head">
+      <span class="material-symbols-outlined">style</span>
+      <div>
+        <h3 class="tm-card__title tm-mono" style="font-size:14px">{{ row.obj.sku }}</h3>
+        <p class="tm-card__sub">{{ row.obj.size }}{% if row.obj.primary_color %} · {% if row.obj.primary_color.hex %}<span class="tm-swatch" style="background:{{ row.obj.primary_color.hex }}"></span>{% endif %}{{ row.obj.primary_color.name }}{% endif %}{% if row.obj.secondary_color %} + {{ row.obj.secondary_color.name }}{% endif %}</p>
+      </div>
+      <div class="tm-card__tools">
+        <a class="tm-btn tm-btn--ghost tm-btn--sm" href="{% url 'admin:catalog_variant_change' row.obj.pk %}">Editar</a>
+        <form method="post" action="{% url 'catalog:variant_recalculate' row.obj.pk %}">{% csrf_token %}<button class="tm-btn tm-btn--secondary tm-btn--sm" type="submit"><span class="material-symbols-outlined">refresh</span>Recalcular</button></form>
+      </div>
+    </div>
+    <div class="tm-card__body">
+      <div class="tm-grid">
+        <div class="tm-col-4">
+          <div class="tm-eyebrow">Composição</div>
+          <table class="tm-table tm-table--compact">
+            {% for item in row.bom %}<tr><td class="r tm-nowrap" style="width:60px">{{ item.quantity }} ×</td><td>{{ item.part|default:item.component }}</td><td class="tm-muted tm-small">{{ item.get_kind_display }}{% if item.kind == "part" %} · {{ item.effective_slot }}{% endif %}</td></tr>{% empty %}<tr><td class="tm-muted" colspan="3">Sem itens de composição.</td></tr>{% endfor %}
+          </table>
+          <p class="tm-muted tm-small" style="margin:10px 0 0">Filamento principal {{ row.obj.main_filament|default:"—" }}{% if row.obj.secondary_filament %} · secundário {{ row.obj.secondary_filament }}{% endif %} · mão de obra {{ row.obj.labor_minutes }} min</p>
+        </div>
+        <div class="tm-col-4">
+          <div class="tm-eyebrow">Custo unitário</div>
+          {% if row.obj.cost_cached is not None %}
+          <div class="tm-num">R$ {{ row.obj.cost_cached }}</div>
+          <table class="tm-table tm-table--compact tm-table--kv" style="margin-top:10px">
+            <tr><td>Filamento</td><td class="r">{{ row.obj.cost_breakdown.filamento }}</td></tr>
+            <tr><td>Hora-máquina</td><td class="r">{{ row.obj.cost_breakdown.hora_maquina }}</td></tr>
+            <tr><td>Mão de obra</td><td class="r">{{ row.obj.cost_breakdown.mao_de_obra }}</td></tr>
+            <tr><td>Componentes</td><td class="r">{{ row.obj.cost_breakdown.componentes }}</td></tr>
+            <tr><td>Embalagem</td><td class="r">{{ row.obj.cost_breakdown.embalagem }}</td></tr>
+            <tr><td>Licença</td><td class="r">{{ row.obj.cost_breakdown.licenca }}</td></tr>
+            <tr><td>Provisão de falha</td><td class="r">{{ row.obj.cost_breakdown.falha }}</td></tr>
+          </table>
+          {% for p in row.obj.cost_breakdown.problemas %}<div style="margin-top:8px"><span class="tm-pill tm-pill--warn">{{ p }}</span></div>{% endfor %}
+          <p class="tm-muted tm-small" style="margin:8px 0 0">Calculado em {{ row.obj.cost_cached_at|date:"d/m/Y H:i" }}</p>
+          {% else %}<div class="tm-empty" style="padding:16px 0;text-align:left">Ainda sem custo. Clique em recalcular.</div>{% endif %}
+        </div>
+        <div class="tm-col-4">
+          <div class="tm-eyebrow">Preço por canal</div>
+          <div class="tm-table-wrap"><table class="tm-table tm-table--compact">
+            <thead><tr><th>Canal</th><th class="r">Sugerido</th><th class="r">Vigente</th><th class="r">Margem</th><th></th></tr></thead>
+            <tbody>
+            {% for pr in row.prices %}
+            <tr><td>{{ pr.channel }}</td><td class="r">{{ pr.suggested_price }}</td><td class="r"><strong>{{ pr.current_price }}</strong></td><td class="r">{{ pr.margin_pct }}%</td><td>{% if pr.below_minimum %}<span class="tm-pill tm-pill--warn">abaixo do mín.</span>{% elif pr.approved %}<span class="tm-pill tm-pill--ok">aprovado</span>{% else %}<span class="tm-pill">a aprovar</span>{% endif %}</td></tr>
+            {% empty %}<tr><td colspan="5" class="tm-muted">Sem preços ainda.</td></tr>{% endfor %}
+            </tbody>
+          </table></div>
+          <p style="margin:10px 0 0"><a class="tm-link tm-small" href="{% url 'admin:costing_pricebychannel_changelist' %}?variant__id__exact={{ row.obj.pk }}">Aprovar ou sobrescrever preços</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% empty %}
+  <div class="tm-card"><div class="tm-empty"><span class="material-symbols-outlined">style</span>Nenhuma variante. <a class="tm-link" href="{% url 'admin:catalog_variant_add' %}?product={{ product.pk }}">Criar a primeira</a></div></div>
+  {% endfor %}
+</div>
 {% endblock %}

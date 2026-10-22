@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.core.dashboard import shell
 from apps.costing.models import Printer
 
 from .models import PrintJob, ProductionOrder
@@ -37,6 +38,7 @@ def board(request):
     ).select_related("variant__product").order_by("priority", "due_date")
     ready = ProductionOrder.objects.filter(status=ProductionOrder.Status.READY).select_related("variant__product").order_by("-updated_at")[:8]
     return render(request, "production/board.html", {
+        **shell(request, "Produção"),
         "columns": columns, "unassigned": unassigned, "printers": printers, "finishing": finishing, "ready": ready,
     })
 

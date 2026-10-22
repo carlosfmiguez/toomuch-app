@@ -1,4 +1,6 @@
 Django>=5.2,<5.3
+django-unfold>=0.110,<1
+polib>=1.2
 django-environ>=0.11
 django-storages[s3]>=1.14
 boto3>=1.34

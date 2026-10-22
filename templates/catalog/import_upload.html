@@ -1,19 +1,29 @@
-{% extends "base.html" %}
-{% block title %}Importar em lote · Sistema Toomuch{% endblock %}
+{% extends "shell.html" %}
 {% block content %}
-<div class="eyebrow">Catálogo</div>
-<h1>Importar em lote</h1>
-<p class="muted">Envie um ZIP com uma pasta por modelo (STL, 3MF, STEP, F3D e fotos dentro). Arquivos soltos na raiz são agrupados pelo nome. Você revisa nome, categoria, SKU e origem antes de criar os produtos, que entram como rascunho.</p>
-<div class="cols">
-  <form class="stack card" method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <label>ZIP com os modelos e fotos (até {{ max_mb }} MB) <input type="file" name="zip" accept=".zip"></label>
-    <label>ou pasta já no servidor <input type="text" name="folder" placeholder="/dados/thangs"></label>
-    <button class="btn" type="submit">Analisar</button>
-  </form>
-  <div class="card">
-    <div class="eyebrow">Como organizar a pasta</div>
-    <pre style="font-size:13px;line-height:1.5;margin:10px 0 0;white-space:pre-wrap">modelos/
+<div class="tm-page">
+  <div class="tm-head">
+    <div>
+      <div class="tm-head__eyebrow">Catálogo</div>
+      <h1 class="tm-head__title">Importar em lote</h1>
+      <p class="tm-head__lead">Envie um ZIP com uma pasta por modelo (STL, 3MF, STEP, F3D e fotos dentro). Arquivos soltos na raiz são agrupados pelo nome. Você revisa nome, categoria, SKU e origem antes de criar os produtos, que entram como rascunho.</p>
+    </div>
+  </div>
+
+  <div class="tm-grid">
+    <section class="tm-card tm-col-6">
+      <div class="tm-card__head"><span class="material-symbols-outlined">upload_file</span><h2 class="tm-card__title">1. Enviar os arquivos</h2></div>
+      <form class="tm-card__body tm-form" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label class="tm-field">ZIP com os modelos e fotos (até {{ max_mb }} MB)<input type="file" name="zip" accept=".zip"></label>
+        <label class="tm-field">ou pasta já no servidor<input type="text" name="folder" placeholder="/dados/thangs"><span class="tm-field__help">Para lotes grandes copiados direto no disco do servidor.</span></label>
+        <div class="tm-row"><button class="tm-btn tm-btn--primary" type="submit"><span class="material-symbols-outlined">search</span>Analisar</button></div>
+      </form>
+    </section>
+
+    <section class="tm-card tm-col-6">
+      <div class="tm-card__head"><span class="material-symbols-outlined">folder_open</span><h2 class="tm-card__title">Como organizar a pasta</h2></div>
+      <div class="tm-card__body tm-stack">
+<pre class="tm-pre">modelos/
   Luminaria Solaris/
     cupula.stl
     base.stl
@@ -24,8 +34,10 @@
     vaso-face-2.jpg
   porta-escova.stl        ← soltos na raiz
   porta-escova.jpg           viram "Porta escova"</pre>
-    <p class="muted" style="margin-top:10px">Arquivos já importados (mesmo conteúdo) são ignorados, então pode reenviar a mesma pasta com novidades.</p>
-    <p class="muted">Pelo terminal: <code>python manage.py import_folder PASTA --mapear planilha.xlsx</code> gera a planilha de mapeamento; <code>--aplicar planilha.xlsx</code> importa.</p>
+        <p class="tm-muted tm-small" style="margin:0">Arquivos já importados (mesmo conteúdo) são ignorados, então pode reenviar a mesma pasta com novidades.</p>
+        <p class="tm-muted tm-small" style="margin:0">Pelo terminal: <code class="tm-code">python manage.py import_folder PASTA --mapear planilha.xlsx</code> gera a planilha de mapeamento; <code class="tm-code">--aplicar planilha.xlsx</code> importa.</p>
+      </div>
+    </section>
   </div>
 </div>
 {% endblock %}

@@ -1,18 +1,19 @@
 from django.contrib import admin, messages
 from django.utils.html import format_html
+from unfold.admin import ModelAdmin, TabularInline
 
 from .models import Asset, BOMItem, Category, Color, Component, Part, Product, Variant
 from .services import parse_asset
 
 
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(ModelAdmin):
     list_display = ("name", "code", "order")
     ordering = ("order",)
 
 
 @admin.register(Color)
-class ColorAdmin(admin.ModelAdmin):
+class ColorAdmin(ModelAdmin):
     list_display = ("name", "code", "swatch", "hex")
     search_fields = ("name", "code")
 
@@ -23,7 +24,7 @@ class ColorAdmin(admin.ModelAdmin):
         return format_html('<span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:{};border:1px solid #C9B99B"></span>', obj.hex)
 
 
-class VariantInline(admin.TabularInline):
+class VariantInline(TabularInline):
     model = Variant
     extra = 0
     fields = ("sku", "size", "primary_color", "secondary_color", "main_filament", "secondary_filament", "is_default", "cost_cached")
@@ -32,14 +33,14 @@ class VariantInline(admin.TabularInline):
     autocomplete_fields = ("main_filament", "secondary_filament")
 
 
-class PartInline(admin.TabularInline):
+class PartInline(TabularInline):
     model = Part
     extra = 0
     fields = ("name", "default_qty", "color_slot", "waste_pct_override", "failure_pct_override")
     show_change_link = True
 
 
-class AssetInline(admin.TabularInline):
+class AssetInline(TabularInline):
     model = Asset
     extra = 0
     fk_name = "product"
@@ -48,7 +49,7 @@ class AssetInline(admin.TabularInline):
 
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+class ProductAdmin(ModelAdmin):
     list_display = ("name", "sku_base", "category", "status", "origin", "ready", "updated_at")
     list_filter = ("status", "category", "origin")
     search_fields = ("name", "sku_base", "tags")
@@ -67,7 +68,7 @@ class ProductAdmin(admin.ModelAdmin):
         return obj.ready_for_catalog
 
 
-class BOMItemInline(admin.TabularInline):
+class BOMItemInline(TabularInline):
     model = BOMItem
     extra = 0
     fields = ("kind", "part", "component", "quantity", "color_slot")
@@ -75,7 +76,7 @@ class BOMItemInline(admin.TabularInline):
 
 
 @admin.register(Variant)
-class VariantAdmin(admin.ModelAdmin):
+class VariantAdmin(ModelAdmin):
     list_display = ("sku", "product", "size", "primary_color", "cost_cached", "cost_cached_at", "stock_ready")
     list_filter = ("product__category", "size")
     search_fields = ("sku", "product__name")
@@ -96,7 +97,7 @@ class VariantAdmin(admin.ModelAdmin):
         messages.success(request, f"{queryset.count()} variante(s) recalculada(s).")
 
 
-class PartAssetInline(admin.TabularInline):
+class PartAssetInline(TabularInline):
     model = Asset
     extra = 0
     fk_name = "part"
@@ -107,7 +108,7 @@ class PartAssetInline(admin.TabularInline):
 
 
 @admin.register(Part)
-class PartAdmin(admin.ModelAdmin):
+class PartAdmin(ModelAdmin):
     list_display = ("name", "product", "default_qty", "color_slot", "has_production_file")
     list_filter = ("product__category",)
     search_fields = ("name", "product__name")
@@ -120,14 +121,14 @@ class PartAdmin(admin.ModelAdmin):
 
 
 @admin.register(Component)
-class ComponentAdmin(admin.ModelAdmin):
+class ComponentAdmin(ModelAdmin):
     list_display = ("name", "unit_cost", "stock_qty", "min_stock", "is_packaging", "supplier", "active")
     list_filter = ("is_packaging", "active")
     search_fields = ("name", "supplier")
 
 
 @admin.register(Asset)
-class AssetAdmin(admin.ModelAdmin):
+class AssetAdmin(ModelAdmin):
     list_display = ("name", "kind", "product", "part", "printer", "is_production", "grams_total", "print_time_min", "parsed_at", "parse_error")
     list_filter = ("kind", "is_production", "printer")
     search_fields = ("name", "product__name", "part__name", "sha256")

@@ -1,28 +1,41 @@
-{% extends "base.html" %}
-{% block title %}Revisar importação · Sistema Toomuch{% endblock %}
+{% extends "shell.html" %}
 {% block content %}
-<div class="eyebrow">Catálogo · importação em lote</div>
-<h1>Revisar antes de importar</h1>
-<p class="muted">{{ products|length }} modelo(s) encontrado(s). Ajuste nome, categoria, SKU-base e origem; desmarque o que não deve entrar. Produtos com SKU já existente recebem só os arquivos novos.</p>
-<form method="post">
-  {% csrf_token %}
-  <div style="overflow-x:auto">
-  <table>
-    <tr><th></th><th>Pasta</th><th>Nome</th><th>Categoria</th><th>SKU-base</th><th>Origem</th><th>Autor / licença</th><th>Arquivos</th></tr>
-    {% for row in products %}
-    <tr>
-      <td><input type="checkbox" name="import-{{ row.i }}" checked style="width:22px;height:22px"></td>
-      <td class="muted" style="max-width:140px;word-break:break-word">{{ row.sp.folder|default:"(raiz)" }}</td>
-      <td><input type="text" name="name-{{ row.i }}" value="{{ row.sp.name }}" style="min-width:180px"></td>
-      <td><select name="cat-{{ row.i }}">{% for c in categories %}<option value="{{ c.code }}" {% if c.code == row.sp.category_code %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></td>
-      <td><input type="text" name="sku-{{ row.i }}" value="{{ row.sp.sku_base }}" style="width:150px">{% if row.exists %}<div><span class="pill">já existe</span></div>{% endif %}</td>
-      <td><select name="origin-{{ row.i }}">{% for v, n in origins %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></td>
-      <td><input type="text" name="author-{{ row.i }}" placeholder="autor, link" style="width:160px"></td>
-      <td style="font-size:12px">{{ row.sp.models|length }} 3D · {{ row.sp.photos|length }} fotos{% if row.sp.others %} · {{ row.sp.others|length }} outros{% endif %}{% if row.sp.note %}<div><span class="pill warn">{{ row.sp.note }}</span></div>{% endif %}<div class="muted">{% for f in row.sp.models %}{{ f.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</div></td>
-    </tr>
-    {% endfor %}
-  </table>
+<div class="tm-page">
+  <div class="tm-head">
+    <div>
+      <div class="tm-head__eyebrow">Catálogo · importação em lote</div>
+      <h1 class="tm-head__title">Revisar antes de importar <small>{{ products|length }} modelo{{ products|length|pluralize }}</small></h1>
+      <p class="tm-head__lead">Ajuste nome, categoria, SKU-base e origem; desmarque o que não deve entrar. Produtos com SKU já existente recebem só os arquivos novos.</p>
+    </div>
   </div>
-  <p style="margin-top:20px"><button class="btn" type="submit">Importar os marcados</button> <a class="btn secondary" href="{% url 'catalog:import_upload' %}">Cancelar</a></p>
-</form>
+
+  <form method="post" class="tm-stack">
+    {% csrf_token %}
+    <div class="tm-card">
+      <div class="tm-card__body tm-card__body--flush tm-table-wrap">
+        <table class="tm-table">
+          <thead><tr><th></th><th>Pasta</th><th>Nome</th><th>Categoria</th><th>SKU-base</th><th>Origem</th><th>Autor / licença</th><th>Arquivos</th></tr></thead>
+          <tbody>
+          {% for row in products %}
+          <tr>
+            <td><label class="tm-field"><input type="checkbox" name="import-{{ row.i }}" checked></label></td>
+            <td class="tm-muted tm-small" style="max-width:140px;word-break:break-word">{{ row.sp.folder|default:"(raiz)" }}</td>
+            <td><input class="tm-input" type="text" name="name-{{ row.i }}" value="{{ row.sp.name }}" style="min-width:180px"></td>
+            <td><select class="tm-select" name="cat-{{ row.i }}">{% for c in categories %}<option value="{{ c.code }}" {% if c.code == row.sp.category_code %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></td>
+            <td><input class="tm-input tm-mono" type="text" name="sku-{{ row.i }}" value="{{ row.sp.sku_base }}" style="width:150px">{% if row.exists %}<div style="margin-top:4px"><span class="tm-pill tm-pill--info">já existe</span></div>{% endif %}</td>
+            <td><select class="tm-select" name="origin-{{ row.i }}">{% for v, n in origins %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></td>
+            <td><input class="tm-input" type="text" name="author-{{ row.i }}" placeholder="autor, link" style="width:160px"></td>
+            <td class="tm-small">{{ row.sp.models|length }} 3D · {{ row.sp.photos|length }} fotos{% if row.sp.others %} · {{ row.sp.others|length }} outros{% endif %}{% if row.sp.note %}<div style="margin-top:4px"><span class="tm-pill tm-pill--warn">{{ row.sp.note }}</span></div>{% endif %}<div class="tm-muted">{% for f in row.sp.models %}{{ f.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</div></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="tm-row">
+      <button class="tm-btn tm-btn--primary tm-btn--lg" type="submit"><span class="material-symbols-outlined">download_done</span>Importar os marcados</button>
+      <a class="tm-btn tm-btn--secondary tm-btn--lg" href="{% url 'catalog:import_upload' %}">Cancelar</a>
+    </div>
+  </form>
+</div>
 {% endblock %}

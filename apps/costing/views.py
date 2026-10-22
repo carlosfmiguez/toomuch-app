@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from apps.catalog.models import Variant
+from apps.core.dashboard import shell
 
 from . import engine
 from .forms import QuickCalculatorForm
@@ -39,8 +40,9 @@ def calculator(request):
             price = engine.suggest_price(breakdown.total, terms)
             channels.append({"channel": channel, "fee": fee, "price": price})
         result = {"breakdown": breakdown, "hourly": hourly, "channels": channels}
-    template = "costing/_calculator_result.html" if request.headers.get("HX-Request") else "costing/calculator.html"
-    return render(request, template, {"form": form, "result": result, "params": params})
+    if request.headers.get("HX-Request"):
+        return render(request, "costing/_calculator_result.html", {"form": form, "result": result, "params": params})
+    return render(request, "costing/calculator.html", {**shell(request, "Calculadora rápida"), "form": form, "result": result, "params": params})
 
 
 @login_required
@@ -50,4 +52,4 @@ def price_list(request):
     for variant in Variant.objects.select_related("product", "primary_color").exclude(product__status="discontinued"):
         by_channel = {p.channel_id: p for p in latest_prices(variant)}
         rows.append({"variant": variant, "cells": [by_channel.get(c.pk) for c in channels]})
-    return render(request, "costing/price_list.html", {"channels": channels, "rows": rows})
+    return render(request, "costing/price_list.html", {**shell(request, "Lista de preço"), "channels": channels, "rows": rows})
