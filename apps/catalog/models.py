@@ -82,6 +82,11 @@ class Product(models.Model):
     license_valid_until = models.DateField("licença válida até", null=True, blank=True)
     license_attribution_required = models.BooleanField("exige atribuição", default=False)
 
+    shared_parts = models.ManyToManyField(
+        "Part", verbose_name="peças compartilhadas de outros produtos", blank=True, related_name="shared_in",
+        help_text="Peça de outro produto usada também neste (mesmo 3MF; trocar o arquivo vale para todos).",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -113,9 +118,16 @@ class Product(models.Model):
     def main_photo(self):
         return self.assets.filter(kind=Asset.Kind.PHOTO).order_by("-is_main", "order", "id").first()
 
+    def all_parts(self) -> list["Part"]:
+        """Peças próprias + peças compartilhadas de outros produtos."""
+        own = list(self.parts.all())
+        if not self.pk:
+            return own
+        return own + [p for p in self.shared_parts.select_related("product") if p.product_id != self.pk]
+
     def catalog_checklist(self) -> list[tuple[str, bool]]:
         """Itens do 'pronto para catálogo' e se cada um está ok."""
-        parts = list(self.parts.all())
+        parts = self.all_parts()
         has_sliced = bool(parts) and all(p.production_assets().exists() for p in parts)
         variants = list(self.variants.all())
         bom_ok = bool(variants) and all(v.bom_items.exists() for v in variants)
@@ -243,7 +255,7 @@ class Variant(models.Model):
         if self.bom_items.exists():
             return 0
         created = 0
-        for part in self.product.parts.all():
+        for part in self.product.all_parts():
             BOMItem.objects.create(variant=self, kind=BOMItem.Kind.PART, part=part, quantity=Decimal(part.default_qty))
             created += 1
         return created

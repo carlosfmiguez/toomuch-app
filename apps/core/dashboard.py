@@ -33,7 +33,7 @@ def pending_items() -> list[dict]:
     products = active_products().prefetch_related("parts__assets", "variants")
     items: list[dict] = []
     for prod in products:
-        for part in prod.parts.all():
+        for part in prod.all_parts():
             if not part.production_assets().exists():
                 items.append({"kind": "Peça sem 3MF fatiado", "label": f"{prod.name} · {part.name}", "url": reverse("catalog:product_detail", args=[prod.pk]) + "#pecas"})
     for v in Variant.objects.filter(cost_cached__isnull=True, product__in=products).select_related("product"):

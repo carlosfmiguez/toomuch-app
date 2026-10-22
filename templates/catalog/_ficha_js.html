@@ -10,6 +10,16 @@
     });
   });
 
+  // Filtro da biblioteca de peças
+  document.querySelectorAll("[data-tm-filter]").forEach(function (input) {
+    input.addEventListener("input", function () {
+      var q = input.value.trim().toLowerCase();
+      document.querySelectorAll(input.dataset.tmFilter).forEach(function (el) {
+        el.hidden = q && (el.dataset.text || "").indexOf(q) < 0;
+      });
+    });
+  });
+
   // Margem ao vivo enquanto o preço é digitado (mesma fórmula do motor de custo)
   function num(s) {
     if (s === undefined || s === null || s === "") return null;

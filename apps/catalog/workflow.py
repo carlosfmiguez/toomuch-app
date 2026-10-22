@@ -40,7 +40,7 @@ def variant_price_status(variant: Variant) -> dict:
 
 
 def steps_for(product: Product) -> list[Step]:
-    parts = list(product.parts.all())
+    parts = product.all_parts()
     variants = list(product.variants.all())
 
     # 1. Dados
@@ -127,13 +127,15 @@ def refresh_product(product: Product) -> None:
 
 
 def sync_bom_with_parts(product: Product) -> None:
-    """Peça nova entra na composição de todas as variantes; peça removida sai pelo cascade/protect."""
+    """Peça nova (própria ou compartilhada) entra na composição de todas as variantes; peça desvinculada sai."""
     from .models import BOMItem
 
     for v in product.variants.all():
         have = set(v.bom_items.filter(kind=BOMItem.Kind.PART).values_list("part_id", flat=True))
-        for part in product.parts.exclude(pk__in=have):
+        for part in [p for p in product.all_parts() if p.pk not in have]:
             BOMItem.objects.create(variant=v, kind=BOMItem.Kind.PART, part=part, quantity=part.default_qty)
+        allowed = {p.pk for p in product.all_parts()}
+        v.bom_items.filter(kind=BOMItem.Kind.PART).exclude(part_id__in=allowed).delete()
 
 
 # --- SKU -------------------------------------------------------------------

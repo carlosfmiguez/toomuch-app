@@ -174,3 +174,61 @@ class CostStaysFreshTests(TestCase):
         })
         v.refresh_from_db()
         self.assertEqual(v.cost_breakdown["filamento"], "20.40")
+
+
+@override_settings(MEDIA_ROOT=TMP)
+class ReusePartTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_demo", verbosity=0)
+        cls.user = get_user_model().objects.create_superuser("carlos", "c@example.com", "senha-forte-123")
+
+    def setUp(self):
+        from .models import Variant
+
+        self.client.force_login(self.user)
+        self.sol = Product.objects.get(sku_base="TM-LUM-SOL")
+        self.base = self.sol.parts.get(name="Base")
+        self.client.post(reverse("catalog:product_create"), {"name": "Luminária Spin", "category": self.sol.category_id, "origin": "own"})
+        self.spin = Product.objects.get(name="Luminária Spin")
+        Variant.objects.create(product=self.spin, sku="TM-LUM-SPI-U", main_filament=FilamentSKU.objects.first(),
+                               secondary_filament=FilamentSKU.objects.last())
+
+    def test_library_listed(self):
+        resp = self.client.get(reverse("catalog:product_detail", args=[self.spin.pk]) + "?etapa=pecas")
+        self.assertContains(resp, "Usar peça já cadastrada")
+        self.assertContains(resp, "Luminária Solaris")
+
+    def test_share_part(self):
+        self.client.post(reverse("catalog:part_reuse", args=[self.spin.pk]), {"part": self.base.pk, "mode": "share"})
+        self.assertIn(self.base, self.spin.all_parts())
+        self.assertFalse(self.spin.parts.filter(name="Peça única").exists(), "a peça vazia criada junto some")
+        v = self.spin.variants.get()
+        self.assertEqual([b.part_id for b in v.bom_items.filter(kind="part")], [self.base.pk])
+        self.assertGreater(v.cost_breakdown["filamento"], "0")
+        # não dá para apagar no produto de origem enquanto está compartilhada
+        self.client.post(reverse("catalog:part_delete", args=[self.base.pk]))
+        self.assertTrue(type(self.base).objects.filter(pk=self.base.pk).exists())
+        # desvincular tira só do Spin
+        self.client.post(reverse("catalog:part_unlink", args=[self.spin.pk, self.base.pk]))
+        self.assertNotIn(self.base, self.spin.all_parts())
+        self.assertFalse(v.bom_items.filter(part=self.base).exists())
+        self.assertTrue(self.sol.variants.get().bom_items.filter(part=self.base).exists())
+
+    def test_copy_part(self):
+        self.client.post(reverse("catalog:part_reuse", args=[self.spin.pk]), {"part": self.base.pk, "mode": "copy"})
+        copy = self.spin.parts.get(name="Base")
+        self.assertNotEqual(copy.pk, self.base.pk)
+        asset = copy.production_asset()
+        self.assertEqual(asset.grams_total, self.base.production_asset().grams_total)
+        self.assertTrue(workflow.steps_for(self.spin)[1].done)
+
+    def test_part_from_loose_file(self):
+        from .models import Asset
+
+        loose = Asset.objects.create(kind="3mf_sliced", name="pes_tripe.gcode.3mf", grams_total=Decimal("40"), print_time_min=90,
+                                     parsed_at="2026-10-22T10:00Z")
+        self.client.post(reverse("catalog:part_from_file", args=[self.spin.pk]), {"asset": loose.pk})
+        loose.refresh_from_db()
+        self.assertEqual(loose.part.product_id, self.spin.pk)
+        self.assertTrue(loose.is_production)

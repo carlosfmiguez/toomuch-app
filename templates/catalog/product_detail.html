@@ -99,7 +99,9 @@
             {% if p.production and p.production.thumbnail %}<img src="{{ p.production.thumbnail.url }}" alt="">{% else %}<span class="material-symbols-outlined">view_in_ar</span>{% endif %}
           </div>
           <div class="tm-part__main">
-            <form method="post" action="{% url 'catalog:part_update' p.obj.pk %}" class="tm-part__form">{% csrf_token %}
+            {% if p.shared %}<div class="tm-part__shared"><span class="material-symbols-outlined">link</span>Peça compartilhada de <a class="tm-link" href="{% url 'catalog:product_detail' p.obj.product_id %}?etapa=pecas">{{ p.obj.product.name }}</a> — trocar o 3MF ou editar vale para os dois produtos.</div>
+            {% elif p.used_in %}<div class="tm-part__shared"><span class="material-symbols-outlined">link</span>Também usada em {% for o in p.used_in %}<a class="tm-link" href="{% url 'catalog:product_detail' o.pk %}?etapa=pecas">{{ o.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %} — mudanças valem para todos.</div>{% endif %}
+            <form method="post" action="{% url 'catalog:part_update' p.obj.pk %}" class="tm-part__form">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
               <label class="tm-field tm-field--grow">Nome da peça{{ p.form.name }}</label>
               <label class="tm-field tm-field--xs">Qtd.{{ p.form.default_qty }}</label>
               <label class="tm-field">Cor{{ p.form.color_slot }}</label>
@@ -117,7 +119,7 @@
             <div class="tm-part__file tm-part__file--missing"><span class="material-symbols-outlined">upload</span>Falta o 3MF fatiado desta peça.</div>
             {% endif %}
 
-            <form method="post" enctype="multipart/form-data" action="{% url 'catalog:part_upload' p.obj.pk %}" class="tm-upload">{% csrf_token %}
+            <form method="post" enctype="multipart/form-data" action="{% url 'catalog:part_upload' p.obj.pk %}" class="tm-upload">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
               <label class="tm-file">
                 <input type="file" name="file" accept=".3mf" required data-tm-file>
                 <span class="material-symbols-outlined">attach_file</span><span class="tm-file__name" data-empty="Escolher .gcode.3mf">Escolher .gcode.3mf</span>
@@ -141,9 +143,15 @@
             </details>
             {% endif %}
           </div>
+          {% if p.shared %}
+          <form method="post" action="{% url 'catalog:part_unlink' product.pk p.obj.pk %}" class="tm-part__del" onsubmit="return confirm('Tirar a peça {{ p.obj.name|escapejs }} deste produto? Ela continua em {{ p.obj.product.name|escapejs }}.')">{% csrf_token %}
+            <button class="tm-btn tm-btn--ghost tm-btn--sm tm-btn--icon" title="Desvincular deste produto"><span class="material-symbols-outlined">link_off</span></button>
+          </form>
+          {% else %}
           <form method="post" action="{% url 'catalog:part_delete' p.obj.pk %}" class="tm-part__del" onsubmit="return confirm('Remover a peça {{ p.obj.name|escapejs }}? Ela sai também da composição das variantes.')">{% csrf_token %}
             <button class="tm-btn tm-btn--ghost tm-btn--sm tm-btn--icon" title="Remover peça"><span class="material-symbols-outlined">delete</span></button>
           </form>
+          {% endif %}
         </div>
         {% empty %}
         <div class="tm-empty"><span class="material-symbols-outlined">view_in_ar</span>Nenhuma peça ainda. Adicione abaixo.</div>
@@ -156,6 +164,48 @@
           <label class="tm-field">Cor<select name="new-color_slot"><option value="main">Cor principal</option><option value="secondary">Cor secundária</option></select></label>
           <button class="tm-btn tm-btn--secondary" type="submit">Adicionar peça</button>
         </form>
+        {% if library_parts or library_files %}
+        <details class="tm-card tm-library"{% if not parts %} open{% endif %}>
+          <summary class="tm-card__head"><span class="material-symbols-outlined">inventory_2</span><div><h3 class="tm-card__title">Usar peça já cadastrada</h3><p class="tm-card__sub">Sem subir o arquivo de novo: compartilhe uma peça de outro produto ou use um 3MF que já está na biblioteca</p></div><span class="material-symbols-outlined tm-newvariant__chev">expand_more</span></summary>
+          <div class="tm-card__body tm-stack">
+            <label class="tm-search tm-search--full"><span class="material-symbols-outlined">search</span><input type="search" placeholder="Buscar peça, produto ou arquivo" data-tm-filter=".tm-libitem"></label>
+            {% if library_parts %}
+            <div class="tm-eyebrow">Peças de outros produtos</div>
+            <div class="tm-liblist">
+              {% for lp in library_parts %}
+              <div class="tm-libitem" data-text="{{ lp.obj.name|lower }} {{ lp.obj.product.name|lower }} {{ lp.production.name|lower }}">
+                <div class="tm-libitem__thumb">{% if lp.production and lp.production.thumbnail %}<img src="{{ lp.production.thumbnail.url }}" alt="">{% else %}<span class="material-symbols-outlined">view_in_ar</span>{% endif %}</div>
+                <div class="tm-libitem__text">
+                  <strong>{{ lp.obj.name }}</strong> <span class="tm-muted">· {{ lp.obj.product.name }}</span>
+                  <div class="tm-small tm-muted">{% if lp.production %}{{ lp.production.grams_total|floatformat:1 }} g · {{ lp.production.print_time_min|hm }} · {{ lp.obj.get_color_slot_display|lower }}{% else %}sem 3MF fatiado{% endif %}</div>
+                </div>
+                <form method="post" action="{% url 'catalog:part_reuse' product.pk %}" class="tm-libitem__actions">{% csrf_token %}
+                  <input type="hidden" name="part" value="{{ lp.obj.pk }}">
+                  <button class="tm-btn tm-btn--secondary tm-btn--sm" name="mode" value="share" title="A mesma peça nos dois produtos; trocar o 3MF vale para os dois"><span class="material-symbols-outlined">link</span>Compartilhar</button>
+                  <button class="tm-btn tm-btn--ghost tm-btn--sm" name="mode" value="copy" title="Cópia independente, já com o 3MF"><span class="material-symbols-outlined">content_copy</span>Copiar</button>
+                </form>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+            {% if library_files %}
+            <div class="tm-eyebrow">3MF fatiados soltos na biblioteca</div>
+            <div class="tm-liblist">
+              {% for f in library_files %}
+              <div class="tm-libitem" data-text="{{ f.name|lower }}">
+                <div class="tm-libitem__thumb">{% if f.thumbnail %}<img src="{{ f.thumbnail.url }}" alt="">{% else %}<span class="material-symbols-outlined">description</span>{% endif %}</div>
+                <div class="tm-libitem__text"><strong>{{ f.name|truncatechars:48 }}</strong><div class="tm-small tm-muted">{{ f.grams_total|floatformat:1 }} g · {{ f.print_time_min|hm }} · enviado em {{ f.created_at|date:"d/m/Y" }}</div></div>
+                <form method="post" action="{% url 'catalog:part_from_file' product.pk %}" class="tm-libitem__actions">{% csrf_token %}
+                  <input type="hidden" name="asset" value="{{ f.pk }}">
+                  <button class="tm-btn tm-btn--secondary tm-btn--sm"><span class="material-symbols-outlined">add</span>Usar como peça</button>
+                </form>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+        </details>
+        {% endif %}
         <p class="tm-hint"><span class="material-symbols-outlined">info</span><span>No Bambu Studio: <strong>Arquivo → Exportar → Exportar arquivo fatiado da placa</strong>. Se as peças saem juntas na mesma placa, cadastre uma peça só.</span></p>
       </div>
 

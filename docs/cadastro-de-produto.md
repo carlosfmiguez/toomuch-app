@@ -18,6 +18,9 @@ que muda o custo é salvo — não existe mais botão "Recalcular" obrigatório.
 2. **Peças e 3MF fatiado**: renomeie a peça se quiser e, na própria linha, escolha o `.gcode.3mf`
    (Bambu Studio → Arquivo → Exportar → Exportar arquivo fatiado da placa) → **Enviar 3MF**. A linha mostra gramas,
    tempo e a miniatura da placa. Produto com várias peças impressas separadas: **Outra peça**.
+   Peça que já existe em outro produto (uma base, os pés): **Usar peça já cadastrada** → **Compartilhar** (a mesma
+   peça e o mesmo 3MF nos dois produtos; trocar o arquivo vale para ambos) ou **Copiar** (cópia independente, já
+   com o 3MF). Um 3MF que subiu solto para a biblioteca (importação em lote) entra com **Usar como peça**.
 3. **Variante**: tamanho, cor e filamento → **Criar variante e calcular custo**. O SKU sai sozinho
    (`SKU-base-TAMANHO-COR`) e a composição entra com as peças do produto. Minutos de mão de obra, componentes
    (kit elétrico, caixa) e quantidade de peças ficam em **Editar** na variante.
