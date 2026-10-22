@@ -120,6 +120,8 @@ e escolha a impressora para a qual foi fatiado; a leitura acontece no upload.
 
 ## Fluxo de uso no back-office
 
+Passo a passo detalhado, com exemplo (Sagrada Família): [docs/cadastro-de-produto.md](docs/cadastro-de-produto.md).
+
 1. **Filamentos**: cadastre o SKU (marca, fabricante, tipo, cor oficial) e registre uma **compra** — o custo
    médio e o saldo vêm dela.
 2. **Produto**: crie o produto, as **peças impressas** e suba o 3MF fatiado de cada peça.
