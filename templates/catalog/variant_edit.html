@@ -68,7 +68,7 @@
   </section>
 
   <div class="tm-actionbar">
-    <form method="post" action="{% url 'catalog:variant_delete' variant.pk %}" onsubmit="return confirm('Remover a variante {{ variant.sku }}?')">{% csrf_token %}<button class="tm-btn tm-btn--ghost tm-btn--danger-text" type="submit"><span class="material-symbols-outlined">delete</span>Remover variante</button></form>
+    <form method="post" action="{% url 'catalog:variant_delete' variant.pk %}" onsubmit="return confirm('Remover a variante {{ variant.sku }}?')">{% csrf_token %}<button class="tm-btn tm-btn--ghost tm-btn--danger-text" type="submit"><span class="material-symbols-outlined">delete</span>Excluir variante</button></form>
     <span class="tm-spacer"></span>
     <a class="tm-btn tm-btn--ghost" href="{% url 'catalog:product_detail' product.pk %}#v{{ variant.pk }}">Cancelar</a>
     <button class="tm-btn tm-btn--primary" type="submit" form="variant-form" name="action" value="save"><span class="material-symbols-outlined">save</span>Salvar e recalcular</button>

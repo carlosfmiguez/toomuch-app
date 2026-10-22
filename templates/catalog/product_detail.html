@@ -232,6 +232,7 @@
               {% if v.status.all_approved and not v.status.below %}<span class="tm-pill tm-pill--ok">preço aprovado</span>{% elif v.status.pending %}<span class="tm-pill tm-pill--info">aprovar preço</span>{% endif %}
               <form method="post" action="{% url 'catalog:variant_recalculate' v.obj.pk %}">{% csrf_token %}<button class="tm-btn tm-btn--ghost tm-btn--sm tm-btn--icon" type="submit" title="Recalcular custo agora"><span class="material-symbols-outlined">refresh</span></button></form>
               <a class="tm-btn tm-btn--secondary tm-btn--sm" href="{% url 'catalog:variant_edit' v.obj.pk %}"><span class="material-symbols-outlined">tune</span>Editar</a>
+                <form method="post" action="{% url 'catalog:variant_delete' v.obj.pk %}" onsubmit="return confirm('Excluir a variante {{ v.obj.sku|escapejs }}? Os preços dela também saem. Não dá para desfazer.')">{% csrf_token %}<button class="tm-btn tm-btn--ghost tm-btn--sm tm-btn--icon tm-btn--danger-text" type="submit" title="Excluir variante"><span class="material-symbols-outlined">delete</span></button></form>
             </div>
           </div>
           <div class="tm-variant__body tm-variant__body--single">

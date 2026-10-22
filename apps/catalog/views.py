@@ -453,13 +453,24 @@ def variant_edit(request, pk):
 @require_POST
 def variant_delete(request, pk):
     variant = get_object_or_404(Variant, pk=pk)
-    product_id, sku = variant.product_id, variant.sku
+    product, sku, was_default = variant.product, variant.sku, variant.is_default
+    n_orders = variant.orders.count()
+    if n_orders:
+        messages.error(request, f"{sku} tem {n_orders} ordem(ns) de produção registrada(s) e não pode ser excluída (o histórico precisa dela).")
+        return redirect(_ficha(product.pk, "variantes", f"v{variant.pk}"))
     try:
-        variant.delete()
-        messages.success(request, f"Variante {sku} removida.")
+        with transaction.atomic():
+            variant.delete()
     except ProtectedError:
-        messages.error(request, f"{sku} tem ordens de produção e não pode ser removida.")
-    return redirect(_ficha(product_id, "variantes"))
+        messages.error(request, f"{sku} está em uso e não pode ser excluída.")
+        return redirect(_ficha(product.pk, "variantes"))
+    if was_default:
+        other = product.variants.order_by("created_at").first()
+        if other:
+            other.is_default = True
+            other.save(update_fields=["is_default"])
+    messages.success(request, f"Variante {sku} excluída.")
+    return redirect(_ficha(product.pk, "variantes"))
 
 
 @login_required

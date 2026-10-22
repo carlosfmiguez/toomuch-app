@@ -232,3 +232,25 @@ class ReusePartTests(TestCase):
         loose.refresh_from_db()
         self.assertEqual(loose.part.product_id, self.spin.pk)
         self.assertTrue(loose.is_production)
+
+
+class DeleteVariantTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_demo", verbosity=0)
+        cls.user = get_user_model().objects.create_superuser("carlos", "c@example.com", "senha-forte-123")
+
+    def test_delete_one_variant_from_card(self):
+        from .models import Variant
+
+        self.client.force_login(self.user)
+        p = Product.objects.get(sku_base="TM-LUM-SOL")
+        first = p.variants.get()
+        self.client.post(reverse("catalog:variant_add", args=[p.pk]), {"size": "P", "main_filament": first.main_filament_id})
+        self.assertEqual(p.variants.count(), 2)
+        resp = self.client.get(reverse("catalog:product_detail", args=[p.pk]) + "?etapa=variantes")
+        self.assertContains(resp, reverse("catalog:variant_delete", args=[first.pk]))
+        self.client.post(reverse("catalog:variant_delete", args=[first.pk]))
+        self.assertEqual(p.variants.count(), 1, "só a variante escolhida sai")
+        self.assertTrue(p.variants.get().is_default, "a que ficou vira a padrão")
+        self.assertFalse(Variant.objects.filter(pk=first.pk).exists())
