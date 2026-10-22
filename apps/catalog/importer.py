@@ -12,11 +12,18 @@ Fluxo em duas etapas, para revisar antes de criar:
    é ignorado; produto com o mesmo SKU-base é reaproveitado.
 
 Também funciona sem planilha (``apply(pasta)``), usando as sugestões do scan.
+
+Manifesto opcional: um ``produtos.csv`` na raiz do ZIP/pasta (separado por ``;`` ou ``,``)
+com as colunas ``Pasta; Nome; Categoria; SKU-base; Origem; Autor; Link; Termos;
+Descrição curta; Atribuição``. Ele substitui as sugestões automáticas da pasta
+correspondente, para a importação já chegar com nome, categoria e licença certos.
 """
 
 from __future__ import annotations
 
+import csv
 import hashlib
+import io
 import re
 import unicodedata
 from dataclasses import dataclass, field
@@ -39,12 +46,18 @@ IGNORED_NAMES = {".ds_store", "thumbs.db", "desktop.ini"}
 
 # palavras no nome → código de categoria
 CATEGORY_HINTS = [
+    (("natal", "christmas", "papai noel"), "NAT"),
+    (("pascoa", "páscoa", "easter"), "PAS"),
     (("luminaria", "luminária", "abajur", "lampada", "lâmpada", "lamp", "luz"), "LUM"),
     (("vaso", "cachepot", "cachepô", "planter", "jarra"), "VAS"),
     (("porta", "organizador", "suporte", "bandeja", "caixa", "holder", "stand", "tray", "box", "escova"), "UTI"),
     (("cruz", "anjo", "nossa senhora", "santo", "santa", "oratorio", "oratório", "terço", "terco", "jesus"), "REL"),
-    (("natal", "pascoa", "páscoa", "presente", "dia das", "namorados", "halloween", "arvore", "árvore"), "SAZ"),
+    (("natal", "christmas", "arvore", "árvore", "rena", "sino", "papai noel"), "NAT"),
+    (("pascoa", "páscoa", "easter", "coelho", "ovo"), "PAS"),
+    (("presente", "dia das", "namorados", "halloween"), "SAZ"),
 ]
+
+MANIFEST_NAMES = ("produtos.csv", "_produtos.csv", "manifesto.csv")
 
 
 @dataclass
@@ -56,6 +69,12 @@ class ScannedProduct:
     models: list[Path] = field(default_factory=list)
     photos: list[Path] = field(default_factory=list)
     others: list[Path] = field(default_factory=list)
+    origin: str = "own"
+    author: str = ""
+    license_url: str = ""
+    license_terms: str = ""
+    short_description: str = ""
+    attribution: bool = False
     note: str = ""
 
     @property
@@ -149,7 +168,41 @@ def scan(root: Path | str) -> list[ScannedProduct]:
             sp.note = "só fotos, sem arquivo 3D"
         elif not sp.photos:
             sp.note = "sem foto"
+    _apply_manifest(root, found)
     return found
+
+
+def read_manifest(root: Path) -> dict[str, dict]:
+    """produtos.csv da raiz → {pasta: linha}. Aceita ; ou , e UTF-8 com ou sem BOM."""
+    for name in MANIFEST_NAMES:
+        path = root / name
+        if path.is_file():
+            text = path.read_bytes().decode("utf-8-sig", errors="replace")
+            dialect = csv.Sniffer().sniff(text.splitlines()[0], delimiters=";,")
+            rows = csv.DictReader(io.StringIO(text), dialect=dialect)
+            return {str(r.get("Pasta") or "").strip(): {k.strip(): (v or "").strip() for k, v in r.items() if k} for r in rows}
+    return {}
+
+
+def _apply_manifest(root: Path, found: list[ScannedProduct]) -> None:
+    manifest = read_manifest(root)
+    if not manifest:
+        return
+    for sp in found:
+        row = manifest.get(sp.folder)
+        if not row:
+            continue
+        sp.name = row.get("Nome") or sp.name
+        sp.category_code = (row.get("Categoria") or sp.category_code).upper()
+        sp.sku_base = (row.get("SKU-base") or sp.sku_base).upper()
+        origin = (row.get("Origem") or "").lower()
+        if origin in Product.Origin.values:
+            sp.origin = origin
+        sp.author = row.get("Autor", "")
+        sp.license_url = row.get("Link", "")
+        sp.license_terms = row.get("Termos", "")
+        sp.short_description = row.get("Descrição curta", "")
+        sp.attribution = (row.get("Atribuição", "") or "").lower() in ("sim", "s", "yes", "1", "true")
 
 
 MAPPING_COLUMNS = ["Pasta", "Nome", "Categoria (código)", "SKU-base", "Origem", "Autor/licença", "Arquivos 3D", "Fotos", "Outros", "Observação", "Importar?"]
@@ -214,6 +267,17 @@ def read_mapping(path: Path | str) -> list[dict]:
     return out
 
 
+def _is_sliced(path: Path) -> bool:
+    from apps.files3d import readers
+
+    try:
+        with open(path, "rb") as fh:
+            data = readers.read_sliced_3mf(fh)
+        return bool(data.get("grams_total"))
+    except Exception:  # noqa: BLE001 - 3MF de projeto, sem fatiamento
+        return False
+
+
 def _sha256(path: Path) -> str:
     h = hashlib.sha256()
     with open(path, "rb") as f:
@@ -265,13 +329,15 @@ def _import_one(sp: ScannedProduct, row: dict, root: Path, user, default_categor
     category = Category.objects.filter(code=code).first() or Category.objects.filter(code=default_category).first() or Category.objects.first()
     sku_base = str(row.get("SKU-base") or sp.sku_base).strip().upper()
     name = str(row.get("Nome") or sp.name).strip()
-    origin = str(row.get("Origem") or "own").strip().lower()
+    origin = str(row.get("Origem") or sp.origin or "own").strip().lower()
     if origin not in Product.Origin.values:
         origin = Product.Origin.OWN
     product, created = Product.objects.get_or_create(
         sku_base=sku_base,
         defaults={"name": name, "category": category, "status": Product.Status.DRAFT, "origin": origin,
-                  "license_author": str(row.get("Autor/licença") or "").strip()},
+                  "license_author": (str(row.get("Autor/licença") or "").strip() or sp.author)[:120],
+                  "license_url": sp.license_url[:200], "license_terms": sp.license_terms[:200],
+                  "short_description": sp.short_description[:200], "license_attribution_required": sp.attribution},
     )
     if created:
         report.created_products += 1
@@ -287,11 +353,14 @@ def _import_one(sp: ScannedProduct, row: dict, root: Path, user, default_categor
             report.files_skipped += 1
             continue
         kind = EXT_KIND[path.suffix.lower()]
+        production = False
+        if kind == Asset.Kind.THREEMF_PROJECT and _is_sliced(path):
+            kind, production = Asset.Kind.THREEMF_SLICED, True  # já tem gramas e tempo: vira arquivo de produção
         part = None
-        if kind in (Asset.Kind.STL, Asset.Kind.THREEMF_PROJECT, Asset.Kind.STEP, Asset.Kind.F3D):
+        if kind in (Asset.Kind.STL, Asset.Kind.THREEMF_PROJECT, Asset.Kind.THREEMF_SLICED, Asset.Kind.STEP, Asset.Kind.F3D):
             part_name = humanize(path.stem) if len(sp.models) > 1 else "Peça única"
             part, _ = Part.objects.get_or_create(product=product, name=part_name[:80])
-        asset = Asset(product=product, part=part, kind=kind, uploaded_by=user, name=path.name,
+        asset = Asset(product=product, part=part, kind=kind, uploaded_by=user, name=path.name, is_production=production,
                       is_main=(kind == Asset.Kind.PHOTO and not product.assets.filter(kind=Asset.Kind.PHOTO).exists()))
         with open(path, "rb") as fh:
             asset.file.save(path.name, File(fh), save=True)

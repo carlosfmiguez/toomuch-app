@@ -23,8 +23,8 @@
             <td><input class="tm-input" type="text" name="name-{{ row.i }}" value="{{ row.sp.name }}" style="min-width:180px"></td>
             <td><select class="tm-select" name="cat-{{ row.i }}">{% for c in categories %}<option value="{{ c.code }}" {% if c.code == row.sp.category_code %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></td>
             <td><input class="tm-input tm-mono" type="text" name="sku-{{ row.i }}" value="{{ row.sp.sku_base }}" style="width:150px">{% if row.exists %}<div style="margin-top:4px"><span class="tm-pill tm-pill--info">já existe</span></div>{% endif %}</td>
-            <td><select class="tm-select" name="origin-{{ row.i }}">{% for v, n in origins %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></td>
-            <td><input class="tm-input" type="text" name="author-{{ row.i }}" placeholder="autor, link" style="width:160px"></td>
+            <td><select class="tm-select" name="origin-{{ row.i }}">{% for v, n in origins %}<option value="{{ v }}" {% if v == row.sp.origin %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></td>
+            <td><input class="tm-input" type="text" name="author-{{ row.i }}" value="{{ row.sp.author }}" placeholder="autor, link" style="width:160px"></td>
             <td class="tm-small">{{ row.sp.models|length }} 3D · {{ row.sp.photos|length }} fotos{% if row.sp.others %} · {{ row.sp.others|length }} outros{% endif %}{% if row.sp.note %}<div style="margin-top:4px"><span class="tm-pill tm-pill--warn">{{ row.sp.note }}</span></div>{% endif %}<div class="tm-muted">{% for f in row.sp.models %}{{ f.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</div></td>
           </tr>
           {% endfor %}

@@ -20,6 +20,13 @@ CATEGORIES = [
     ("UTI", "Organizadores e utilidades", 3),
     ("REL", "Decoração religiosa", 4),
     ("SAZ", "Sazonais e presentes", 5),
+    ("NAT", "Natal", 6),
+    ("PAS", "Páscoa", 7),
+    ("BAN", "Banheiro", 8),
+    ("MAQ", "Maquiagem e acessórios", 9),
+    ("ESC", "Escritório", 10),
+    ("COZ", "Cozinha", 11),
+    ("CAS", "Casa e decoração", 12),
 ]
 
 COLORS = [

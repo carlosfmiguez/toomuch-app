@@ -209,3 +209,33 @@ class ProductAdminFlowTests(TestCase):
         self.assertEqual(asset.product_id, product.pk)
         self.assertIsNotNone(asset.grams_total)
         self.assertTrue(product.catalog_checklist()[0][1], "3MF fatiado em todas as peças")
+
+
+class ManifestImportTests(TestCase):
+    """produtos.csv na raiz define nome, categoria, SKU e licença; 3MF fatiado vira arquivo de produção."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_base", verbosity=0)
+
+    def test_manifest_and_sliced(self):
+        from apps.files3d.tests import make_3mf
+
+        with tempfile.TemporaryDirectory() as tmp, override_settings(MEDIA_ROOT=tmp):
+            root = Path(tmp) / "pacote"
+            (root / "NAT-SIN Sino").mkdir(parents=True)
+            (root / "NAT-SIN Sino" / "Sino.3mf").write_bytes(make_3mf())
+            (root / "NAT-SIN Sino" / "foto.jpg").write_bytes(jpeg_bytes())
+            (root / "produtos.csv").write_text(
+                "Pasta;Nome;Categoria;SKU-base;Origem;Autor;Link;Termos;Descrição curta;Atribuição\n"
+                "NAT-SIN Sino;Sino de Natal;NAT;TM-NAT-SIN;unlicensed;MakerWorld — Andy_E;;Uso pessoal;;não\n",
+                encoding="utf-8-sig",
+            )
+            sp = importer.scan(root)[0]
+            self.assertEqual((sp.name, sp.category_code, sp.sku_base, sp.origin), ("Sino de Natal", "NAT", "TM-NAT-SIN", "unlicensed"))
+            importer.apply(root)
+            p = Product.objects.get(sku_base="TM-NAT-SIN")
+            self.assertEqual(p.category.code, "NAT")
+            self.assertEqual(p.license_author, "MakerWorld — Andy_E")
+            self.assertFalse(p.license_is_valid)
+            self.assertTrue(p.parts.get().production_assets().exists(), "3MF fatiado entra como arquivo de produção")
