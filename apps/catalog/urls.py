@@ -27,4 +27,6 @@ urlpatterns = [
     path("variante/<int:pk>/precos/", views.variant_prices, name="variant_prices"),
     path("importar/", views_import.import_upload, name="import_upload"),
     path("importar/revisar/", views_import.import_review, name="import_review"),
+    path("importar/andamento/", views_import.import_progress, name="import_progress"),
+    path("importar/passo/", views_import.import_step, name="import_step"),
 ]

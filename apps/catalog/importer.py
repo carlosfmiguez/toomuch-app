@@ -298,14 +298,26 @@ class ImportReport:
 
 def apply(root: Path | str, mapping: Path | str | None = None, user=None, default_category: str = "UTI") -> ImportReport:
     root = Path(root)
-    scanned = {(sp.folder, sp.name): sp for sp in scan(root)}
-    by_folder = {sp.folder: sp for sp in scanned.values() if sp.folder}
-    by_name = {sp.name: sp for sp in scanned.values()}
-    rows = read_mapping(mapping) if mapping else [
+    scanned = scan(root)
+    rows = read_mapping(mapping) if mapping else default_rows(scanned)
+    return apply_rows(root, rows, user=user, default_category=default_category, scanned=scanned)
+
+
+def default_rows(scanned: list[ScannedProduct]) -> list[dict]:
+    return [
         {"Pasta": sp.folder, "Nome": sp.name, "Categoria (código)": sp.category_code, "SKU-base": sp.sku_base,
-         "Origem": sp.origin, "Autor/licença": sp.author, "Importar?": "sim"} for sp in scanned.values()
+         "Origem": sp.origin, "Autor/licença": sp.author, "Importar?": "sim"} for sp in scanned
     ]
-    report = ImportReport()
+
+
+def apply_rows(root: Path | str, rows: list[dict], user=None, default_category: str = "UTI",
+               scanned: list[ScannedProduct] | None = None, report: ImportReport | None = None) -> ImportReport:
+    """Importa as linhas dadas (pode ser uma só: a tela importa um produto por requisição)."""
+    root = Path(root)
+    scanned = scanned if scanned is not None else scan(root)
+    by_folder = {sp.folder: sp for sp in scanned if sp.folder}
+    by_name = {sp.name: sp for sp in scanned}
+    report = report or ImportReport()
     for row in rows:
         if str(row.get("Importar?") or "sim").strip().lower() in ("não", "nao", "n", "no", "0"):
             report.skipped_rows += 1

@@ -145,7 +145,11 @@ class ImporterTests(TestCase):
             self.assertContains(resp, "TM-LUM-SOL")
             post = {"import-0": "on", "name-0": "Luminária Solaris", "cat-0": "LUM", "sku-0": "tm-lum-sol", "origin-0": "own"}
             resp = self.client.post(reverse("catalog:import_review"), post)
-            self.assertEqual(resp.status_code, 302)
+            self.assertRedirects(resp, reverse("catalog:import_progress"))
+            self.assertContains(self.client.get(reverse("catalog:import_progress")), "0 de 1")
+            step = self.client.post(reverse("catalog:import_step")).json()
+            self.assertEqual((step["done"], step["total"], step["finished"]), (1, 1, True))
+            self.assertIn("redirect", step)
             self.assertEqual(Product.objects.count(), 1)
             self.assertEqual(Product.objects.get().name, "Luminária Solaris")
             self.assertFalse((self.root / "work").exists() and any((self.root / "work").iterdir()))

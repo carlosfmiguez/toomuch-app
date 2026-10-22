@@ -6,6 +6,7 @@ temporária do servidor entre as duas etapas, identificada por um token na sess�
 
 from __future__ import annotations
 
+import json
 import shutil
 import tempfile
 import uuid
@@ -15,7 +16,9 @@ from pathlib import Path
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
 from apps.core.dashboard import shell
@@ -25,6 +28,7 @@ from .models import Category, Product
 
 IMPORT_ROOT = Path(getattr(settings, "IMPORT_TMP_DIR", Path(tempfile.gettempdir()) / "toomuch-import"))
 MAX_ZIP_MB = 1024
+QUEUE_FILE = "_fila.json"
 
 
 def _workdir(token: str) -> Path:
@@ -119,22 +123,67 @@ def import_review(request):
                 "Origem": request.POST.get(f"origin-{i}", "own"), "Autor/licença": request.POST.get(f"author-{i}", "").strip(),
                 "Importar?": "sim",
             })
-        report = _apply_rows(workdir, rows, request.user)
-        shutil.rmtree(workdir, ignore_errors=True)
-        request.session.pop("import_token", None)
-        messages.success(request, (
-            f"Importação concluída: {report.created_products} produto(s) criado(s), {report.reused_products} reaproveitado(s), "
-            f"{report.files_added} arquivo(s) novo(s), {report.files_skipped} já existiam."
-        ))
-        for err in report.errors:
-            messages.warning(request, err)
-        return redirect(f"{request.build_absolute_uri('/produtos/')}?status=draft")
+        # Importa um produto por requisição (tela de progresso): nenhuma requisição longa ou pesada.
+        (workdir / QUEUE_FILE).write_text(json.dumps({"rows": rows, "done": 0, "report": {}}), encoding="utf-8")
+        return redirect("catalog:import_progress")
     existing = set(Product.objects.values_list("sku_base", flat=True))
     return render(request, "catalog/import_review.html", {
         **shell(request, "Revisar importação"),
         "products": [{"sp": sp, "i": i, "exists": sp.sku_base in existing} for i, sp in enumerate(products)],
         "categories": Category.objects.all(), "origins": Product.Origin.choices,
     })
+
+
+@login_required
+def import_progress(request):
+    token = request.session.get("import_token")
+    try:
+        workdir = _workdir(token or "")
+        queue = json.loads((workdir / QUEUE_FILE).read_text(encoding="utf-8"))
+    except (FileNotFoundError, ValueError):
+        messages.error(request, "Nenhuma importação em andamento. Envie o ZIP de novo.")
+        return redirect("catalog:import_upload")
+    return render(request, "catalog/import_progress.html", {
+        **shell(request, "Importando"), "total": len(queue["rows"]), "done": queue["done"],
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def import_step(request):
+    """Importa o próximo produto da fila e devolve o andamento em JSON."""
+    token = request.session.get("import_token")
+    try:
+        workdir = _workdir(token or "")
+        qpath = workdir / QUEUE_FILE
+        queue = json.loads(qpath.read_text(encoding="utf-8"))
+    except (FileNotFoundError, ValueError):
+        return JsonResponse({"error": "Nenhuma importação em andamento."}, status=410)
+    rows, done = queue["rows"], queue["done"]
+    agg = importer.ImportReport(**{k: v for k, v in queue.get("report", {}).items()}) if queue.get("report") else importer.ImportReport()
+    current = rows[done]["Nome"] if done < len(rows) else ""
+    if done < len(rows):
+        before = len(agg.errors)
+        importer.apply_rows(workdir, [rows[done]], user=request.user, report=agg)
+        done += 1
+        queue.update(done=done, report=agg.__dict__)
+        qpath.write_text(json.dumps(queue), encoding="utf-8")
+        new_errors = agg.errors[before:]
+    else:
+        new_errors = []
+    finished = done >= len(rows)
+    payload = {"done": done, "total": len(rows), "current": current, "errors": new_errors, "finished": finished}
+    if finished:
+        shutil.rmtree(workdir, ignore_errors=True)
+        request.session.pop("import_token", None)
+        messages.success(request, (
+            f"Importação concluída: {agg.created_products} produto(s) criado(s), {agg.reused_products} reaproveitado(s), "
+            f"{agg.files_added} arquivo(s) novo(s), {agg.files_skipped} já existiam."
+        ))
+        for err in agg.errors:
+            messages.warning(request, err)
+        payload["redirect"] = reverse("catalog:product_list") + "?status=draft"
+    return JsonResponse(payload)
 
 
 def _apply_rows(workdir: Path, rows: list[dict], user) -> importer.ImportReport:

@@ -123,3 +123,32 @@ class StlTests(SimpleTestCase):
         self.assertEqual(data["volume_cm3"], 24.0)
         self.assertEqual(data["weight_solid_g"], 29.8)
         self.assertTrue(data["watertight"])
+
+
+class StreamingReadersTests(SimpleTestCase):
+    """Os leitores em fluxo dão o mesmo resultado que o trimesh, com memória constante."""
+
+    def test_binary_stl_stream_matches_trimesh(self):
+        import trimesh
+
+        data = trimesh.creation.icosphere(subdivisions=4, radius=30).export(file_type="stl")
+        count = struct.unpack("<I", data[80:84])[0]
+        stats = readers._stl_stats_binary(io.BytesIO(data[84:]), count)
+        mesh = trimesh.load(io.BytesIO(data), file_type="stl")
+        self.assertAlmostEqual(stats["volume"], mesh.volume, delta=mesh.volume * 1e-4)
+        self.assertAlmostEqual(stats["area"], mesh.area, delta=mesh.area * 1e-4)
+        for a, b in zip(stats["extents"], mesh.extents):
+            self.assertAlmostEqual(a, b, places=3)
+
+    def test_project_3mf_bbox_streaming(self):
+        model = (
+            '<?xml version="1.0"?><model xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
+            "<resources><object id=\"1\"><mesh><vertices>"
+            + "".join(f'<vertex x="{x}" y="{y}" z="{z}"/>' for x, y, z in [(0, 0, 0), (10, 0, 0), (0, 20, 5), (3, 4, 30)])
+            + "</vertices></mesh></object></resources></model>"
+        )
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("3D/3dmodel.model", model)
+        buf.seek(0)
+        self.assertEqual(readers.read_project_3mf(buf)["bbox_mm"], {"x": 10.0, "y": 20.0, "z": 30.0, "vertices": 4})

@@ -51,8 +51,13 @@ def _open_zip(source) -> zipfile.ZipFile:
     if isinstance(source, bytes):
         return zipfile.ZipFile(io.BytesIO(source))
     if hasattr(source, "read"):
-        data = source.read()
-        return zipfile.ZipFile(io.BytesIO(data))
+        # Arquivo com seek: o zipfile lê direto dele, sem copiar tudo para a memória.
+        try:
+            source.seek(0)
+            return zipfile.ZipFile(source)
+        except (AttributeError, OSError, ValueError, io.UnsupportedOperation):
+            data = source.read()
+            return zipfile.ZipFile(io.BytesIO(data))
     raise ReadError("Fonte de arquivo não suportada")
 
 
@@ -214,24 +219,38 @@ def _to_float(value):
 
 
 def _bbox_from_model_files(z: zipfile.ZipFile) -> dict | None:
-    xs: list[float] = []
-    ys: list[float] = []
-    zs: list[float] = []
+    """Caixa envolvente lendo os .model com expat (SAX): não monta árvore, memória constante."""
+    from xml.parsers import expat
+
+    lo = [float("inf")] * 3
+    hi = [float("-inf")] * 3
+    count = [0]
+
+    def start(name, attrs):
+        if name.endswith("vertex"):
+            for i, key in enumerate(("x", "y", "z")):
+                v = float(attrs.get(key, 0))
+                if v < lo[i]:
+                    lo[i] = v
+                if v > hi[i]:
+                    hi[i] = v
+            count[0] += 1
+
     for name in z.namelist():
         if not name.endswith(".model"):
             continue
-        for _event, el in ET.iterparse(io.BytesIO(z.read(name)), events=("end",)):
-            if el.tag == f"{_NS_MODEL}vertex":
-                xs.append(float(el.get("x", 0)))
-                ys.append(float(el.get("y", 0)))
-                zs.append(float(el.get("z", 0)))
-                el.clear()
-    if not xs:
+        parser = expat.ParserCreate()
+        parser.StartElementHandler = start
+        with z.open(name) as fh:
+            while True:
+                chunk = fh.read(1 << 20)
+                if not chunk:
+                    break
+                parser.Parse(chunk, False)
+            parser.Parse(b"", True)
+    if not count[0]:
         return None
-    return {
-        "x": round(max(xs) - min(xs), 2), "y": round(max(ys) - min(ys), 2), "z": round(max(zs) - min(zs), 2),
-        "vertices": len(xs),
-    }
+    return {"x": round(hi[0] - lo[0], 2), "y": round(hi[1] - lo[1], 2), "z": round(hi[2] - lo[2], 2), "vertices": count[0]}
 
 
 def read_project_3mf(source) -> dict:
@@ -242,29 +261,85 @@ def read_project_3mf(source) -> dict:
     return {"bbox_mm": bbox}
 
 
+STL_STREAM_FROM_BYTES = 5 * 1024 * 1024
+
+
+def _stl_stats_binary(fh, count: int) -> dict:
+    """Lê um STL binário em blocos com numpy: caixa, volume assinado e área, sem montar a malha toda."""
+    import numpy as np
+
+    dtype = np.dtype([("n", "<f4", 3), ("v", "<f4", (3, 3)), ("attr", "<u2")])
+    lo = np.full(3, np.inf)
+    hi = np.full(3, -np.inf)
+    volume = 0.0
+    area = 0.0
+    left = count
+    while left > 0:
+        k = min(left, 200_000)
+        buf = fh.read(k * 50)
+        got = len(buf) // 50
+        if got == 0:
+            break
+        tri = np.frombuffer(buf[: got * 50], dtype=dtype)["v"].astype(np.float64)
+        lo = np.minimum(lo, tri.reshape(-1, 3).min(axis=0))
+        hi = np.maximum(hi, tri.reshape(-1, 3).max(axis=0))
+        a, b, c = tri[:, 0], tri[:, 1], tri[:, 2]
+        volume += float(np.einsum("ij,ij->i", a, np.cross(b, c)).sum()) / 6.0
+        area += float(np.linalg.norm(np.cross(b - a, c - a), axis=1).sum()) / 2.0
+        left -= got
+    return {"extents": (hi - lo).tolist(), "volume": abs(volume), "area": area, "faces": count, "watertight": None}
+
+
 def read_stl(source, density_g_cm3: float = 1.24, fill_factor: float = 0.4) -> dict:
     """Dimensões, volume e área de um STL; peso estimado = volume × densidade × fator."""
-    import trimesh
+    import struct
 
-    if hasattr(source, "read"):
-        mesh = trimesh.load(io.BytesIO(source.read()), file_type="stl")
-    else:
-        mesh = trimesh.load(source, file_type="stl")
-    if isinstance(mesh, trimesh.Scene):
-        mesh = trimesh.util.concatenate(tuple(mesh.geometry.values()))
-    extents = [round(float(v), 2) for v in mesh.extents]
-    volume_mm3 = float(mesh.volume) if mesh.is_volume else float(abs(mesh.volume))
-    volume_cm3 = volume_mm3 / 1000.0
+    fh = open(source, "rb") if isinstance(source, str) else source
+    try:
+        try:
+            fh.seek(0)
+        except (AttributeError, OSError):
+            pass
+        head = fh.read(84)
+        stats = None
+        if len(head) == 84:
+            count = struct.unpack("<I", head[80:84])[0]
+            size = None
+            try:
+                pos = fh.tell()
+                fh.seek(0, 2)
+                size = fh.tell()
+                fh.seek(pos)
+            except (AttributeError, OSError):
+                pass
+            # Grandes (> 5 MB) em fluxo, com memória constante; pequenos pelo trimesh, que também diz se é fechado.
+            if size is not None and size == 84 + count * 50 and size > STL_STREAM_FROM_BYTES:
+                stats = _stl_stats_binary(fh, count)
+        if stats is None:
+            # STL em texto (raro e pequeno): usa o trimesh
+            import trimesh
+
+            fh.seek(0)
+            mesh = trimesh.load(io.BytesIO(fh.read()), file_type="stl")
+            if isinstance(mesh, trimesh.Scene):
+                mesh = trimesh.util.concatenate(tuple(mesh.geometry.values()))
+            stats = {"extents": [float(v) for v in mesh.extents], "volume": abs(float(mesh.volume)),
+                     "area": float(mesh.area), "faces": int(len(mesh.faces)), "watertight": bool(mesh.is_watertight)}
+    finally:
+        if isinstance(source, str):
+            fh.close()
+    extents = [round(float(v), 2) for v in stats["extents"]]
+    volume_cm3 = stats["volume"] / 1000.0
     solid_g = volume_cm3 * density_g_cm3
     return {
         "bbox_mm": {"x": extents[0], "y": extents[1], "z": extents[2]},
         "volume_cm3": round(volume_cm3, 2),
-        "area_cm2": round(float(mesh.area) / 100.0, 2),
-        "watertight": bool(mesh.is_watertight),
+        "area_cm2": round(stats["area"] / 100.0, 2),
+        "watertight": stats["watertight"],
         "weight_solid_g": round(solid_g, 1),
         "weight_estimate_g": round(solid_g * fill_factor, 1),
         "fill_factor": fill_factor,
-        "faces": int(len(mesh.faces)),
+        "faces": int(stats["faces"]),
     }
 
 

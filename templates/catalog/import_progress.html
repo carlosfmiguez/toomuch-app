@@ -1,0 +1,49 @@
+{% extends "shell.html" %}
+{% block content %}
+<div class="tm-page tm-narrow">
+  <div class="tm-head">
+    <div>
+      <div class="tm-head__eyebrow">Catálogo · importação em lote</div>
+      <h1 class="tm-head__title">Importando</h1>
+      <p class="tm-head__lead">Um produto de cada vez, para o servidor não sobrecarregar. Deixe esta página aberta até terminar; se ela fechar, abra de novo que continua de onde parou.</p>
+    </div>
+  </div>
+  <section class="tm-card">
+    <div class="tm-card__body tm-stack">
+      <div class="tm-row" style="justify-content:space-between">
+        <strong data-label>Preparando…</strong>
+        <span class="tm-muted" data-count>{{ done }} de {{ total }}</span>
+      </div>
+      <div class="tm-bar"><div class="tm-bar__fill" data-bar style="width:{% widthratio done total 100 %}%"></div></div>
+      <ul class="tm-problems" data-errors></ul>
+      <p class="tm-small tm-muted" data-retry hidden>A conexão falhou; tentando de novo em alguns segundos…</p>
+    </div>
+  </section>
+</div>
+<script>
+(function () {
+  var csrf = document.cookie.match(/csrftoken=([^;]+)/);
+  var url = "{% url 'catalog:import_step' %}";
+  var label = document.querySelector("[data-label]"), count = document.querySelector("[data-count]");
+  var bar = document.querySelector("[data-bar]"), errs = document.querySelector("[data-errors]");
+  var retry = document.querySelector("[data-retry]"), fails = 0;
+  function step() {
+    fetch(url, { method: "POST", headers: { "X-CSRFToken": csrf ? decodeURIComponent(csrf[1]) : "" }, credentials: "same-origin" })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (d) {
+        fails = 0; retry.hidden = true;
+        count.textContent = d.done + " de " + d.total;
+        bar.style.width = (d.total ? Math.round(d.done * 100 / d.total) : 100) + "%";
+        label.textContent = d.finished ? "Concluído" : "Importado: " + d.current;
+        (d.errors || []).forEach(function (e) { var li = document.createElement("li"); li.textContent = e; errs.appendChild(li); });
+        if (d.finished) { window.location = d.redirect; } else { step(); }
+      })
+      .catch(function () {
+        fails += 1; retry.hidden = false;
+        if (fails <= 5) { setTimeout(step, 4000); } else { label.textContent = "Parou. Recarregue a página para continuar."; }
+      });
+  }
+  step();
+})();
+</script>
+{% endblock %}
