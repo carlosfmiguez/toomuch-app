@@ -149,3 +149,63 @@ class ImporterTests(TestCase):
             self.assertEqual(Product.objects.count(), 1)
             self.assertEqual(Product.objects.get().name, "Luminária Solaris")
             self.assertFalse((self.root / "work").exists() and any((self.root / "work").iterdir()))
+
+
+class ProductAdminFlowTests(TestCase):
+    """O caminho do cadastro pelo admin: peça → 3MF fatiado no próprio produto → variante com composição automática."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_base", verbosity=0)
+        cls.user = get_user_model().objects.create_superuser("carlos", "c@example.com", "senha-forte-123")
+
+    def _inline(self, prefix, rows, total=None):
+        data = {f"{prefix}-TOTAL_FORMS": str(total if total is not None else len(rows)), f"{prefix}-INITIAL_FORMS": "0",
+                f"{prefix}-MIN_NUM_FORMS": "0", f"{prefix}-MAX_NUM_FORMS": "1000"}
+        for i, row in enumerate(rows):
+            for k, v in row.items():
+                data[f"{prefix}-{i}-{k}"] = v
+        return data
+
+    def test_part_file_inline_and_default_bom(self):
+        from apps.files3d.tests import make_3mf
+        from apps.inventory.models import FilamentSKU
+
+        self.client.login(username="carlos", password="senha-forte-123")
+        cat = Product._meta.get_field("category").related_model.objects.get(code="REL")
+        fil = FilamentSKU.objects.create(brand="Bambu Lab", manufacturer="Bambu Lab", material="PLA", color_name="Branco")
+        base = {
+            "name": "Sagrada Família", "sku_base": "TM-REL-SAG", "category": str(cat.pk), "status": "draft",
+            "lead_time_days": "5", "origin": "own", "license_cost_per_unit": "0.00",
+        }
+        # 1) produto com uma peça e uma variante, ainda sem arquivo
+        data = {**base, **self._inline("parts", [{"name": "Conjunto", "default_qty": "1", "color_slot": "main"}]),
+                **self._inline("assets", []), **self._inline("variants", [{
+                    "sku": "TM-REL-SAG-U-BRC", "size": "Único", "main_filament": str(fil.pk), "is_default": "on",
+                    "minutes_post": "10", "minutes_assembly": "0", "minutes_packaging": "5", "stock_ready": "0",
+                }])}
+        # o produto tem dois inlines de Asset com o mesmo prefixo base; o Django numera o segundo como assets-2
+        data.update(self._inline("assets-2", []))
+        resp = self.client.post(reverse("admin:catalog_product_add"), data)
+        self.assertEqual(resp.status_code, 302, resp.content[:2000] if resp.status_code != 302 else "")
+        product = Product.objects.get(sku_base="TM-REL-SAG")
+        part = product.parts.get()
+        variant = product.variants.get()
+        self.assertEqual([b.part_id for b in variant.bom_items.all()], [part.pk], "composição automática com a peça")
+
+        # 2) a tela de edição lista a peça no inline de arquivos 3D
+        resp = self.client.get(reverse("admin:catalog_product_change", args=[product.pk]))
+        self.assertContains(resp, "3MF fatiado por peça")
+        self.assertContains(resp, "abrir cadastro completo")
+
+        # 3) sobe o 3MF fatiado pelo inline do produto, escolhendo a peça
+        data = {**base, **self._inline("parts", []), **self._inline("variants", []), **self._inline("assets-2", [])}
+        data["parts-INITIAL_FORMS"] = "0"
+        data.update(self._inline("assets", [{"part": str(part.pk), "kind": "3mf_sliced", "is_production": "on", "version": "1"}]))
+        data["assets-0-file"] = SimpleUploadedFile("conjunto_A1.gcode.3mf", make_3mf())
+        resp = self.client.post(reverse("admin:catalog_product_change", args=[product.pk]), data)
+        self.assertEqual(resp.status_code, 302)
+        asset = part.production_assets().get()
+        self.assertEqual(asset.product_id, product.pk)
+        self.assertIsNotNone(asset.grams_total)
+        self.assertTrue(product.catalog_checklist()[0][1], "3MF fatiado em todas as peças")

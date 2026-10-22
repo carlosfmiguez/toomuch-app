@@ -37,22 +37,24 @@ Mais abaixo, na mesma tela:
 - **Variantes** → *Adicionar outra*: SKU `TM-REL-SAG-U-BRC`, tamanho `Único`, cor principal *Branco*, filamento do slot principal *Bambulab PLA LITE Branca*, marcar *variante padrão*.
 - **Fotos, renders e PDFs do produto**: pode deixar para o passo 7.
 
-Clique em **Salvar e continuar editando**.
+Clique em **Salvar e continuar editando**. Ao salvar, a variante ganha automaticamente a **composição** com as peças do produto (o sistema avisa no topo).
 
-## 3. Subir o 3MF fatiado na peça
+## 3. Subir o 3MF fatiado da peça
 
-O 3MF **vai na peça**, não nos arquivos do produto (só assim ele entra no custo).
+Ainda no produto, na seção **3MF fatiado por peça** (logo abaixo de Peças impressas) → *Adicionar*:
 
-1. Na linha da peça *Conjunto*, clique no link de alterar (ou menu **Cadastros → Peças impressas → Sagrada Família · Conjunto**).
-2. Em **Arquivos da peça** → *Adicionar*: tipo **3MF fatiado (.gcode.3mf)**, arquivo = o exportado no passo 1, impressora-alvo *A1 #1* (ou em branco = qualquer), marcar **arquivo de produção** → **Salvar**.
+1. **Peça**: *Conjunto* (a peça só aparece aqui depois do produto salvo).
+2. Tipo **3MF fatiado (.gcode.3mf)** (já vem marcado), **arquivo** = o exportado no passo 1, impressora-alvo *A1 #1* (ou em branco = qualquer), **arquivo de produção** ✓ (já vem marcado) → **Salvar e continuar editando**.
 3. Ao salvar, a linha mostra **gramas** e **tempo** lidos do arquivo (ex.: 85,20 g / 312 min). Se aparecer *erro de leitura*, o arquivo não é um 3MF fatiado — exporte de novo pelo caminho do passo 1.
 
-## 4. Composição (BOM) e minutos da variante
+O mesmo pode ser feito pelo cadastro da peça (link *abrir cadastro completo →* na linha da peça, ou menu **Cadastros → Peças impressas**), na seção *Arquivos da peça*.
 
-Menu **Cadastros → Variantes → TM-REL-SAG-U-BRC** (ou o link de alterar na linha da variante, dentro do produto).
+## 4. Conferir a composição (BOM) e os minutos da variante
 
-- **Itens de composição**: tipo *Peça impressa*, peça *Sagrada Família · Conjunto*, quantidade `1`. Se tiver embalagem cadastrada: outra linha, tipo *Componente comprado*, componente *Caixa + papel de seda + tag*, quantidade `1`.
-- **Minutos**: pós-processamento `10` (tirar suporte, rebarbas), montagem `0`, embalagem `5`.
+A composição já foi criada no passo 2 (uma linha por peça). Só abra a variante (link *abrir cadastro completo →* na linha da variante, ou **Cadastros → Variantes**) se precisar de:
+
+- **Embalagem ou componentes comprados**: em *Itens de composição*, linha tipo *Componente comprado*, componente *Caixa + papel de seda + tag*, quantidade `1`.
+- **Minutos** diferentes do padrão: pós-processamento `10` (tirar suporte, rebarbas), montagem `0`, embalagem `5`.
 - **Salvar**.
 
 ## 5. Calcular o custo
@@ -67,7 +69,7 @@ Se aparecer um aviso no cartão, resolva e recalcule:
 
 | Aviso | O que fazer |
 | --- | --- |
-| Peça sem 3MF fatiado de produção | passo 3 (tipo 3MF fatiado + *arquivo de produção* marcado) |
+| Peça sem 3MF fatiado de produção | passo 3 (tipo 3MF fatiado, peça escolhida, *arquivo de produção* marcado) |
 | Filamento sem custo médio | passo A (registrar a compra) |
 | Nenhum filamento mapeado para o slot | passo 2, campo *filamento do slot principal* na variante |
 | A variante não tem itens de composição | passo 4 |

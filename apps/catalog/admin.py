@@ -1,9 +1,13 @@
+from django import forms
 from django.contrib import admin, messages
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin, TabularInline
 
 from .models import Asset, BOMItem, Category, Color, Component, Part, Product, Variant
 from .services import parse_asset
+
+MODEL_KINDS = (Asset.Kind.THREEMF_SLICED, Asset.Kind.THREEMF_PROJECT, Asset.Kind.STL, Asset.Kind.STEP, Asset.Kind.F3D)
+MEDIA_KINDS = (Asset.Kind.PHOTO, Asset.Kind.RENDER, Asset.Kind.PDF, Asset.Kind.OTHER)
 
 
 @admin.register(Category)
@@ -38,7 +42,52 @@ class PartInline(TabularInline):
     extra = 0
     fields = ("name", "default_qty", "color_slot", "waste_pct_override", "failure_pct_override")
     show_change_link = True
-    verbose_name_plural = "peças impressas (salve e abra cada peça para subir o 3MF fatiado)"
+    verbose_name_plural = "peças impressas (o que sai da impressora; os arquivos vão na seção seguinte)"
+
+
+class PartFileForm(forms.ModelForm):
+    """Arquivo 3D no cadastro do produto: obriga a escolher a peça e já vem como 3MF de produção."""
+
+    class Meta:
+        model = Asset
+        fields = ("part", "kind", "file", "printer", "is_production", "version")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["kind"].choices = [(k, label) for k, label in Asset.Kind.choices if k in MODEL_KINDS]
+        if not self.instance.pk:
+            self.fields["kind"].initial = Asset.Kind.THREEMF_SLICED
+            self.fields["is_production"].initial = True
+        self.fields["part"].label = "peça"
+        self.fields["part"].help_text = "Salve o produto depois de criar a peça para ela aparecer aqui."
+
+    def clean(self):
+        data = super().clean()
+        if data.get("file") and not data.get("part") and not data.get("DELETE"):
+            raise forms.ValidationError({"part": "Escolha a peça a que este arquivo pertence."})
+        return data
+
+
+class PartFileInline(TabularInline):
+    """3MF fatiado (e STL/STEP) por peça, direto no cadastro do produto."""
+
+    model = Asset
+    form = PartFileForm
+    extra = 0
+    fk_name = "product"
+    fields = ("part", "kind", "file", "printer", "is_production", "version", "grams_total", "print_time_min", "parse_error")
+    readonly_fields = ("grams_total", "print_time_min", "parse_error")
+    verbose_name = "arquivo 3D de uma peça"
+    verbose_name_plural = "3MF fatiado por peça (exporte do Bambu Studio em Arquivo → Exportar → arquivo fatiado da placa; é o que alimenta o custo)"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(kind__in=MODEL_KINDS)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "part":
+            product_id = getattr(request, "_toomuch_product_id", None)
+            kwargs["queryset"] = Part.objects.filter(product_id=product_id) if product_id else Part.objects.none()
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 class AssetInline(TabularInline):
@@ -47,7 +96,16 @@ class AssetInline(TabularInline):
     fk_name = "product"
     fields = ("kind", "file", "name", "is_main", "order")
     verbose_name = "foto, render ou PDF do produto"
-    verbose_name_plural = "fotos, renders e PDFs do produto (o 3MF fatiado vai na peça impressa)"
+    verbose_name_plural = "fotos, renders e PDFs do produto (a foto principal vai para o catálogo e a loja)"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(kind__in=MEDIA_KINDS)
+
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
+        formset.form.base_fields["kind"].choices = [(k, label) for k, label in Asset.Kind.choices if k in MEDIA_KINDS]
+        formset.form.base_fields["kind"].initial = Asset.Kind.PHOTO
+        return formset
 
 
 @admin.register(Product)
@@ -55,7 +113,7 @@ class ProductAdmin(ModelAdmin):
     list_display = ("name", "sku_base", "category", "status", "origin", "ready", "updated_at")
     list_filter = ("status", "category", "origin")
     search_fields = ("name", "sku_base", "tags")
-    inlines = [VariantInline, PartInline, AssetInline]
+    inlines = [PartInline, PartFileInline, VariantInline, AssetInline]
     fieldsets = (
         (None, {"fields": ("name", "sku_base", "category", "status", "short_description", "long_description", "tags")}),
         ("Medidas e prazo", {"fields": (("height_mm", "width_mm", "depth_mm"), "weight_g", "lead_time_days")}),
@@ -68,6 +126,17 @@ class ProductAdmin(ModelAdmin):
     @admin.display(description="pronto p/ catálogo", boolean=True)
     def ready(self, obj):
         return obj.ready_for_catalog
+
+    def get_form(self, request, obj=None, **kwargs):
+        request._toomuch_product_id = obj.pk if obj else None  # para o inline de arquivos listar só as peças deste produto
+        return super().get_form(request, obj, **kwargs)
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        # Variante recém-criada sem composição: entra uma linha por peça do produto.
+        n = sum(v.ensure_default_bom() for v in form.instance.variants.all())
+        if n:
+            messages.info(request, f"Composição criada automaticamente com {n} peça(s); ajuste na variante se precisar.")
 
 
 class BOMItemInline(TabularInline):
@@ -86,6 +155,12 @@ class VariantAdmin(ModelAdmin):
     autocomplete_fields = ("product", "main_filament", "secondary_filament")
     readonly_fields = ("cost_cached", "cost_cached_at", "cost_breakdown")
     actions = ["recalculate"]
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        n = form.instance.ensure_default_bom()
+        if n:
+            messages.info(request, f"Composição criada automaticamente com {n} peça(s).")
 
     @admin.action(description="Recalcular custo e preços sugeridos")
     def recalculate(self, request, queryset):

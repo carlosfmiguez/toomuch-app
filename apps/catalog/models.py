@@ -233,6 +233,16 @@ class Variant(models.Model):
             return self.secondary_filament
         return self.main_filament
 
+    def ensure_default_bom(self) -> int:
+        """Sem composição ainda? Entra uma linha por peça impressa do produto (quantidade = padrão da peça)."""
+        if self.bom_items.exists():
+            return 0
+        created = 0
+        for part in self.product.parts.all():
+            BOMItem.objects.create(variant=self, kind=BOMItem.Kind.PART, part=part, quantity=Decimal(part.default_qty))
+            created += 1
+        return created
+
 
 class Component(models.Model):
     """Insumo comprado: kit elétrico, lâmpada, caixa, tag, fita."""
