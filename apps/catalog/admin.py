@@ -38,14 +38,16 @@ class PartInline(TabularInline):
     extra = 0
     fields = ("name", "default_qty", "color_slot", "waste_pct_override", "failure_pct_override")
     show_change_link = True
+    verbose_name_plural = "peças impressas (salve e abra cada peça para subir o 3MF fatiado)"
 
 
 class AssetInline(TabularInline):
     model = Asset
     extra = 0
     fk_name = "product"
-    fields = ("kind", "file", "name", "is_main", "order", "is_production", "printer", "grams_total", "print_time_min", "parse_error")
-    readonly_fields = ("grams_total", "print_time_min", "parse_error")
+    fields = ("kind", "file", "name", "is_main", "order")
+    verbose_name = "foto, render ou PDF do produto"
+    verbose_name_plural = "fotos, renders e PDFs do produto (o 3MF fatiado vai na peça impressa)"
 
 
 @admin.register(Product)
@@ -104,7 +106,7 @@ class PartAssetInline(TabularInline):
     fields = ("kind", "file", "printer", "is_production", "version", "grams_total", "print_time_min", "parse_error")
     readonly_fields = ("grams_total", "print_time_min", "parse_error")
     verbose_name = "arquivo da peça (3MF fatiado, STL, STEP)"
-    verbose_name_plural = "arquivos da peça"
+    verbose_name_plural = "arquivos da peça — suba o .gcode.3mf exportado do Bambu Studio, tipo '3MF fatiado', e marque 'arquivo de produção'"
 
 
 @admin.register(Part)
