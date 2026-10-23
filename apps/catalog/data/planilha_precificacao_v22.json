@@ -1,0 +1,1167 @@
+[
+{
+"nome": "Organizador empilhável retangular (STACKSEY V2)",
+"pecas": [
+{
+"nome": "Base",
+"gramas": 154,
+"minutos": 276
+},
+{
+"nome": "Meio",
+"gramas": 178,
+"minutos": 299
+},
+{
+"nome": "Topo",
+"gramas": 165,
+"minutos": 300
+},
+{
+"nome": "Copo",
+"gramas": 72,
+"minutos": 117
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+}
+],
+"produto": "TM-MAQ-RET"
+},
+{
+"nome": "Organizador empilhável Cubo (STACKSEY)",
+"pecas": [
+{
+"nome": "Base",
+"gramas": 100,
+"minutos": 137
+},
+{
+"nome": "Topo",
+"gramas": 175,
+"minutos": 234
+},
+{
+"nome": "Copo",
+"gramas": 110,
+"minutos": 126
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+}
+],
+"produto": "TM-MAQ-CUB"
+},
+{
+"nome": "Organizador de maquiagem Display Taylor",
+"pecas": [
+{
+"nome": "Externo",
+"gramas": 224,
+"minutos": 357
+},
+{
+"nome": "Grade e pés",
+"gramas": 153,
+"minutos": 191
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "15",
+"cor_principal": "ROS"
+}
+],
+"produto": "TM-MAQ-TAY",
+"colecoes": [
+"Linha Taylor"
+]
+},
+{
+"nome": "Sino de Natal",
+"pecas": [
+{
+"nome": "Sino",
+"gramas": 39,
+"minutos": 90
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "22"
+}
+],
+"produto": "TM-NAT-SIN"
+},
+{
+"nome": "Coelho Japandi porta-presente",
+"pecas": [
+{
+"nome": "Coelho",
+"gramas": 83,
+"minutos": 321
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "23"
+}
+],
+"produto": "TM-PAS-CJA"
+},
+{
+"nome": "Coelho canelado",
+"pecas": [
+{
+"nome": "Coelho",
+"gramas": 29,
+"minutos": 131
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "23"
+}
+],
+"produto": "TM-PAS-CCA"
+},
+{
+"nome": "Ovo de Páscoa com portinha",
+"pecas": [
+{
+"nome": "Ovo",
+"gramas": 32,
+"minutos": 168
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "23"
+}
+],
+"produto": "TM-PAS-OPT"
+},
+{
+"nome": "Ovo de Páscoa termomoldado",
+"pecas": [
+{
+"nome": "Ovo",
+"gramas": 9,
+"minutos": 31
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "23"
+}
+],
+"produto": "TM-PAS-OTM"
+},
+{
+"nome": "Ovo surpresa coelho orelha dobrada",
+"pecas": [
+{
+"nome": "Ovo",
+"gramas": 51,
+"minutos": 142
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "23"
+}
+],
+"produto": "TM-PAS-OOD",
+"profundidade_mm": 68,
+"largura_mm": 68,
+"altura_mm": 110
+},
+{
+"nome": "Coelho orelha dobrada",
+"pecas": [
+{
+"nome": "Coelho G",
+"gramas": 78,
+"minutos": 169,
+"tamanhos": "G"
+},
+{
+"nome": "Coelho P",
+"gramas": 27,
+"minutos": 71,
+"tamanhos": "P"
+}
+],
+"variantes": [
+{
+"tamanho": "G",
+"filamento_principal": "23"
+},
+{
+"tamanho": "P",
+"filamento_principal": "23"
+}
+],
+"produto": "TM-PAS-COD"
+},
+{
+"nome": "Cruz de Páscoa",
+"pecas": [
+{
+"nome": "Cruz P",
+"gramas": 47,
+"minutos": 101,
+"tamanhos": "P"
+},
+{
+"nome": "Coelho P",
+"gramas": 5,
+"minutos": 26,
+"tamanhos": "P"
+},
+{
+"nome": "Ovo P",
+"gramas": 6,
+"minutos": 40,
+"tamanhos": "P"
+},
+{
+"nome": "Cruz G",
+"gramas": 185,
+"minutos": 338,
+"tamanhos": "G"
+},
+{
+"nome": "Coelho G",
+"gramas": 24,
+"minutos": 88,
+"tamanhos": "G"
+},
+{
+"nome": "Ovo G",
+"gramas": 19,
+"minutos": 46,
+"tamanhos": "G"
+}
+],
+"variantes": [
+{
+"tamanho": "P",
+"filamento_principal": "23"
+},
+{
+"tamanho": "G",
+"filamento_principal": "23"
+}
+],
+"produto": "TM-PAS-CRZ"
+},
+{
+"nome": "Vaso Encanto",
+"pecas": [
+{
+"nome": "Vaso G",
+"gramas": 192,
+"minutos": 63,
+"tamanhos": "G"
+},
+{
+"nome": "Vaso M",
+"gramas": 176,
+"minutos": 59,
+"tamanhos": "M"
+},
+{
+"nome": "Vaso P",
+"gramas": 92,
+"minutos": 53,
+"tamanhos": "P"
+}
+],
+"variantes": [
+{
+"tamanho": "G",
+"filamento_principal": "10",
+"cor_principal": "MAD"
+},
+{
+"tamanho": "M",
+"filamento_principal": "10",
+"cor_principal": "MAD"
+},
+{
+"tamanho": "P",
+"filamento_principal": "10",
+"cor_principal": "MAD"
+}
+],
+"categoria": "VAS",
+"sku_base": "TM-VAS-ENC"
+},
+{
+"nome": "Vaso Órbita Infinity",
+"pecas": [
+{
+"nome": "Vaso",
+"gramas": 94,
+"minutos": 199
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "9",
+"cor_principal": "MAD"
+}
+],
+"categoria": "VAS",
+"sku_base": "TM-VAS-ORI"
+},
+{
+"nome": "Vaso Órbita Oval",
+"pecas": [
+{
+"nome": "Vaso",
+"gramas": 94,
+"minutos": 197
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "9",
+"cor_principal": "MAD"
+}
+],
+"categoria": "VAS",
+"sku_base": "TM-VAS-ORO"
+},
+{
+"nome": "Vaso Geometric facetado",
+"pecas": [
+{
+"nome": "Vaso",
+"gramas": 136,
+"minutos": 252
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "5"
+}
+],
+"categoria": "VAS",
+"sku_base": "TM-VAS-GEO"
+},
+{
+"nome": "Vaso Face",
+"pecas": [
+{
+"nome": "Vaso P",
+"gramas": 83,
+"minutos": 96,
+"tamanhos": "P"
+},
+{
+"nome": "Vaso G",
+"gramas": 190,
+"minutos": 211,
+"tamanhos": "G"
+}
+],
+"variantes": [
+{
+"tamanho": "P",
+"filamento_principal": "5"
+},
+{
+"tamanho": "G",
+"filamento_principal": "5"
+}
+],
+"categoria": "VAS",
+"sku_base": "TM-VAS-FAC"
+},
+{
+"nome": "Vaso autoirrigável Quad-spin",
+"pecas": [
+{
+"nome": "Reservatório de água",
+"gramas": 67,
+"minutos": 76
+},
+{
+"nome": "Vaso",
+"gramas": 122,
+"minutos": 238
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "5"
+}
+],
+"categoria": "VAS",
+"sku_base": "TM-VAS-QSP"
+},
+{
+"nome": "Vaso Gatinhos",
+"pecas": [
+{
+"nome": "Vaso",
+"gramas": 131,
+"minutos": 293
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "8",
+"cor_principal": "BRC"
+}
+],
+"categoria": "VAS",
+"sku_base": "TM-VAS-GAT"
+},
+{
+"nome": "Vaso Angle",
+"pecas": [
+{
+"nome": "Vaso",
+"gramas": 326,
+"minutos": 840
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "8",
+"cor_principal": "BRC"
+}
+],
+"categoria": "VAS",
+"sku_base": "TM-VAS-ANG"
+},
+{
+"nome": "Vaso Nascer",
+"pecas": [
+{
+"nome": "Vaso",
+"gramas": 344,
+"minutos": 540
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "23"
+}
+],
+"categoria": "VAS",
+"sku_base": "TM-VAS-NAS"
+},
+{
+"nome": "Vaso Bubble",
+"pecas": [
+{
+"nome": "Vaso 100 mm",
+"gramas": 92,
+"minutos": 240,
+"tamanhos": "100"
+},
+{
+"nome": "Vaso 125 mm",
+"gramas": 410,
+"minutos": 1140,
+"tamanhos": "125"
+}
+],
+"variantes": [
+{
+"tamanho": "100",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+},
+{
+"tamanho": "125",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+}
+],
+"categoria": "VAS",
+"sku_base": "TM-VAS-BUB"
+},
+{
+"nome": "Vaso Taylor",
+"pecas": [
+{
+"nome": "Corpo G",
+"gramas": 185,
+"minutos": 309,
+"tamanhos": "G"
+},
+{
+"nome": "Pés e pote interno G",
+"gramas": 95.58,
+"minutos": 143,
+"tamanhos": "G"
+},
+{
+"nome": "Corpo P",
+"gramas": 74,
+"minutos": 145,
+"tamanhos": "P"
+},
+{
+"nome": "Pés e pote interno P",
+"gramas": 47,
+"minutos": 72,
+"tamanhos": "P"
+}
+],
+"variantes": [
+{
+"tamanho": "G",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+},
+{
+"tamanho": "P",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+}
+],
+"categoria": "VAS",
+"colecoes": [
+"Linha Taylor"
+],
+"sku_base": "TM-VAS-TAY"
+},
+{
+"nome": "Vaso Babbia",
+"pecas": [
+{
+"nome": "Vaso",
+"gramas": 169,
+"minutos": 346
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+}
+],
+"categoria": "VAS",
+"profundidade_mm": 106,
+"largura_mm": 50,
+"altura_mm": 210,
+"sku_base": "TM-VAS-BAB"
+},
+{
+"nome": "Luminária Alder",
+"pecas": [
+{
+"nome": "Cúpula",
+"gramas": 99,
+"minutos": 220
+},
+{
+"nome": "Pés",
+"gramas": 33,
+"minutos": 60,
+"slot": "secundaria"
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "23",
+"filamento_secundario": "10"
+}
+],
+"categoria": "LUM",
+"sku_base": "TM-LUM-ALD"
+},
+{
+"nome": "Luminária Twist",
+"pecas": [
+{
+"nome": "Cúpula",
+"gramas": 147,
+"minutos": 360
+},
+{
+"nome": "Centro",
+"gramas": 49,
+"minutos": 156,
+"slot": "secundaria"
+},
+{
+"nome": "Base",
+"gramas": 58,
+"minutos": 166
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "24",
+"filamento_secundario": "25"
+}
+],
+"categoria": "LUM",
+"sku_base": "TM-LUM-TWI"
+},
+{
+"nome": "Torre de casinhas luminosa",
+"pecas": [
+{
+"nome": "Torre de casinhas",
+"gramas": 226,
+"minutos": 695
+},
+{
+"nome": "Base estrela",
+"gramas": 55,
+"minutos": 105,
+"slot": "secundaria"
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "8",
+"filamento_secundario": "6",
+"cor_principal": "BRC"
+}
+],
+"categoria": "NAT",
+"sku_base": "TM-NAT-TCL"
+},
+{
+"nome": "Boneco de neve",
+"pecas": [
+{
+"nome": "Corpo",
+"gramas": 53,
+"minutos": 223
+},
+{
+"nome": "Acessórios",
+"gramas": 8,
+"minutos": 45,
+"slot": "secundaria"
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "1",
+"filamento_secundario": "6",
+"cor_principal": "BRC"
+}
+],
+"categoria": "NAT",
+"sku_base": "TM-NAT-BNV"
+},
+{
+"nome": "Boneco de neve canelado",
+"pecas": [
+{
+"nome": "Corpo",
+"gramas": 75,
+"minutos": 259
+},
+{
+"nome": "Chapéu",
+"gramas": 10,
+"minutos": 30
+},
+{
+"nome": "Nariz e botões",
+"gramas": 2,
+"minutos": 19
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "6",
+"cor_principal": "PRE"
+}
+],
+"categoria": "NAT",
+"sku_base": "TM-NAT-BNC"
+},
+{
+"nome": "Anjo 11 cm",
+"pecas": [
+{
+"nome": "Corpo",
+"gramas": 39,
+"minutos": 181
+},
+{
+"nome": "Asa",
+"gramas": 5,
+"minutos": 15
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+}
+],
+"categoria": "NAT",
+"sku_base": "TM-NAT-A11"
+},
+{
+"nome": "Anjo canelado",
+"pecas": [
+{
+"nome": "Corpo G",
+"gramas": 98,
+"minutos": 361,
+"tamanhos": "G"
+},
+{
+"nome": "Asa G",
+"gramas": 10.26,
+"minutos": 21,
+"tamanhos": "G"
+},
+{
+"nome": "Corpo PP",
+"gramas": 21.13,
+"minutos": 91,
+"tamanhos": "PP"
+},
+{
+"nome": "Asa PP",
+"gramas": 3,
+"minutos": 11,
+"tamanhos": "PP"
+}
+],
+"variantes": [
+{
+"tamanho": "G",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+},
+{
+"tamanho": "PP",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+}
+],
+"categoria": "NAT",
+"sku_base": "TM-NAT-ACA"
+},
+{
+"nome": "Quebra-nozes canelado",
+"pecas": [
+{
+"nome": "Quebra-nozes",
+"gramas": 90,
+"minutos": 326
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "6",
+"cor_principal": "PRE"
+}
+],
+"categoria": "NAT",
+"sku_base": "TM-NAT-QNZ"
+},
+{
+"nome": "Trenó porta-vinho",
+"pecas": [
+{
+"nome": "Trenó",
+"gramas": 147,
+"minutos": 180
+},
+{
+"nome": "Ornamentos",
+"gramas": 43,
+"minutos": 110,
+"slot": "secundaria"
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "1",
+"filamento_secundario": "22",
+"cor_principal": "BRC"
+}
+],
+"categoria": "NAT",
+"sku_base": "TM-NAT-TRV"
+},
+{
+"nome": "Anjinho dourado",
+"pecas": [
+{
+"nome": "Anjinho",
+"gramas": 20,
+"minutos": 80
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "22"
+}
+],
+"categoria": "NAT",
+"sku_base": "TM-NAT-AND"
+},
+{
+"nome": "Papai Noel pequeno",
+"pecas": [
+{
+"nome": "Papai Noel",
+"gramas": 18,
+"minutos": 60
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+}
+],
+"categoria": "NAT",
+"sku_base": "TM-NAT-PNP"
+},
+{
+"nome": "Árvore do dinheiro",
+"pecas": [
+{
+"nome": "Árvore",
+"gramas": 89,
+"minutos": 180
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "23"
+}
+],
+"categoria": "NAT",
+"sku_base": "TM-NAT-ADN"
+},
+{
+"nome": "Mini anjo",
+"pecas": [
+{
+"nome": "Mini anjo",
+"gramas": 8,
+"minutos": 60
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+}
+],
+"categoria": "NAT",
+"sku_base": "TM-NAT-MAJ"
+},
+{
+"nome": "Fruteira 30 cm",
+"pecas": [
+{
+"nome": "Cuba",
+"gramas": 437,
+"minutos": 600
+},
+{
+"nome": "Pés",
+"gramas": 140,
+"minutos": 180,
+"slot": "secundaria"
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "1",
+"filamento_secundario": "9",
+"cor_principal": "BRC"
+}
+],
+"categoria": "COZ",
+"sku_base": "TM-COZ-FRU"
+},
+{
+"nome": "Porta-cápsulas Dolce Gusto",
+"pecas": [
+{
+"nome": "Corpo",
+"gramas": 371,
+"minutos": 1020
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+}
+],
+"categoria": "COZ",
+"sku_base": "TM-COZ-CDG"
+},
+{
+"nome": "Porta-vinho Polvo",
+"pecas": [
+{
+"nome": "Polvo",
+"gramas": 440,
+"minutos": 347
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "6",
+"cor_principal": "PRE"
+}
+],
+"categoria": "COZ",
+"sku_base": "TM-COZ-PVP"
+},
+{
+"nome": "Cogumelo B",
+"pecas": [
+{
+"nome": "Chapéu",
+"gramas": 67,
+"minutos": 225
+},
+{
+"nome": "Tronco",
+"gramas": 30,
+"minutos": 113
+},
+{
+"nome": "Pintas",
+"gramas": 10.38,
+"minutos": 75
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+}
+],
+"categoria": "CAS",
+"sku_base": "TM-CAS-COB"
+},
+{
+"nome": "Cogumelo Psico",
+"pecas": [
+{
+"nome": "Chapéu",
+"gramas": 299,
+"minutos": 1209
+},
+{
+"nome": "Corpo",
+"gramas": 88,
+"minutos": 139
+},
+{
+"nome": "Base",
+"gramas": 65,
+"minutos": 95
+},
+{
+"nome": "Base do chapéu",
+"gramas": 114,
+"minutos": 345
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+}
+],
+"categoria": "CAS",
+"sku_base": "TM-CAS-COP"
+},
+{
+"nome": "Cogumelos múltiplos",
+"pecas": [
+{
+"nome": "Cogumelos",
+"gramas": 92,
+"minutos": 278
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "15",
+"cor_principal": "ROS"
+}
+],
+"categoria": "CAS",
+"sku_base": "TM-CAS-COM"
+},
+{
+"nome": "Fúria da Noite (dragão)",
+"pecas": [
+{
+"nome": "Dragão",
+"gramas": 206,
+"minutos": 715
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "23"
+}
+],
+"categoria": "SAZ",
+"profundidade_mm": 380,
+"largura_mm": 280,
+"altura_mm": 42,
+"sku_base": "TM-SAZ-FUR"
+},
+{
+"nome": "Chaveiro Avaí",
+"pecas": [
+{
+"nome": "Bola",
+"gramas": 215,
+"minutos": 810
+},
+{
+"nome": "Anel",
+"gramas": 77,
+"minutos": 148
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+}
+],
+"categoria": "SAZ",
+"sku_base": "TM-SAZ-AVA"
+},
+{
+"nome": "Porta-celular",
+"pecas": [
+{
+"nome": "Porta-celular",
+"gramas": 35,
+"minutos": 60
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+}
+],
+"categoria": "ESC",
+"sku_base": "TM-ESC-CEL"
+},
+{
+"nome": "Chave de Natal dourada",
+"pecas": [
+{
+"nome": "Chave",
+"gramas": 15,
+"minutos": 59
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "22"
+}
+],
+"categoria": "NAT",
+"sku_base": "TM-NAT-CHD"
+},
+{
+"nome": "Anjo enfeite de árvore",
+"pecas": [
+{
+"nome": "Anjo",
+"gramas": 16,
+"minutos": 60
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "6",
+"cor_principal": "PRE"
+}
+],
+"categoria": "NAT",
+"sku_base": "TM-NAT-AEA"
+},
+{
+"nome": "Coelho grande orelha média",
+"pecas": [
+{
+"nome": "Coelho",
+"gramas": 77,
+"minutos": 175
+}
+],
+"variantes": [
+{
+"tamanho": "Único",
+"filamento_principal": "1",
+"cor_principal": "BRC"
+}
+],
+"categoria": "PAS",
+"sku_base": "TM-PAS-CGR"
+}
+]

@@ -508,6 +508,7 @@ SLOTS = {"principal": Part.ColorSlot.MAIN, "secundaria": Part.ColorSlot.SECONDAR
       "A peça provisória 'Peça única' sem arquivo é substituída pelas peças informadas.", {
           "produto": {**S, "description": "SKU-base existente; vazio = procura pelo nome exato ou cria"},
           "nome": S, "categoria": S,
+          "sku_base": {**S, "description": "só para produto novo (ex.: TM-VAS-ENC); vazio ou já usado = gerado"},
           "origem": {"type": "string", "enum": ["autoral", "licenciado", "sem_licenca"],
                      "description": "só para produto novo; padrão sem_licenca"},
           "descricao_curta": S, "altura_mm": I, "largura_mm": I, "profundidade_mm": I,
@@ -521,7 +522,7 @@ SLOTS = {"principal": Part.ColorSlot.MAIN, "secundaria": Part.ColorSlot.SECONDAR
               "tamanho": S, "filamento_principal": S, "filamento_secundario": S, "cor_principal": S, "cor_secundaria": S,
           }, "required": ["filamento_principal"]}},
       }, ["nome"])
-def cadastrar_produto_completo(user, base, nome, produto="", categoria="", origem="", descricao_curta="",
+def cadastrar_produto_completo(user, base, nome, produto="", categoria="", origem="", descricao_curta="", sku_base="",
                                altura_mm=None, largura_mm=None, profundidade_mm=None, colecoes=None, pecas=None, variantes=None):
     from apps.catalog.models import Collection
 
@@ -532,9 +533,11 @@ def cadastrar_produto_completo(user, base, nome, produto="", categoria="", orige
             if not categoria:
                 raise ToolError("Produto novo: informe a categoria.")
             cat = _category(categoria)
+            taken = set(Product.objects.values_list("sku_base", flat=True))
+            wanted = (sku_base or "").strip().upper()
             p = Product.objects.create(
                 name=nome.strip(), category=cat, status=Product.Status.DRAFT,
-                sku_base=importer.suggest_sku(nome, cat.code, set(Product.objects.values_list("sku_base", flat=True))),
+                sku_base=wanted if wanted and wanted not in taken else importer.suggest_sku(nome, cat.code, taken),
                 origin=ORIGINS[origem or "sem_licenca"], short_description=descricao_curta or "",
             )
         elif descricao_curta and not p.short_description:
