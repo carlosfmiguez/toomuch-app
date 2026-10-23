@@ -608,3 +608,16 @@ html.dark .tm-tag { color: var(--color-primary-300); }
 .tm-partform { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
 .tm-partform .tm-field { width: 150px; }
 .tm-partform .tm-field--grow { flex: 1 1 160px; width: auto; }
+
+/* --- escolha tamanhos x partes (3MF com várias placas) --- */
+.tm-choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.tm-choice__opt { position: relative; cursor: pointer; }
+.tm-choice__opt input { position: absolute; opacity: 0; }
+.tm-choice__body { display: grid; gap: 6px; height: 100%; padding: 16px; border: 1px solid var(--color-base-300); border-radius: 12px; font-size: 13px; }
+.tm-choice__body .material-symbols-outlined { color: var(--color-primary-600); }
+.tm-choice__body strong { font-size: 14px; color: var(--tm-ink-strong); }
+.tm-choice__opt input:checked + .tm-choice__body { border-color: var(--color-primary-600); box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary-500) 35%, transparent); }
+.tm-choice__opt input:focus-visible + .tm-choice__body { outline: 2px solid var(--color-primary-500); outline-offset: 2px; }
+html.dark .tm-choice__body { border-color: var(--color-base-700); }
+.tm-plates-ask { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px; }
+.tm-plates-ask span:nth-child(2) { flex: 1 1 260px; }

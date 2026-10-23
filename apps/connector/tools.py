@@ -188,8 +188,14 @@ def _product_info(p: Product, base: str, full: bool = True) -> dict:
                 "so_nos_tamanhos": part.only_sizes or None,
                 "estimativa": {"gramas": str(part.est_grams), "minutos": part.est_minutes} if part.has_estimate else None,
                 "compartilhada_de": part.product.sku_base if part.product_id != p.pk else None,
+                "placa_do_3mf": part.plate_index,
                 "arquivos": [{"id": a.pk, "nome": a.name, "tipo": a.get_kind_display(), "producao": a.is_production,
                               "gramas": str(a.grams_total) if a.grams_total else None, "minutos": a.print_time_min,
+                              "placas": [{"placa": pl.get("index"), "nome": Asset.plate_label(pl), "gramas": str(Asset.plate_grams(pl)),
+                                          "minutos": round(int(pl.get("time_s") or 0) / 60), "objetos": pl.get("objects", [])}
+                                         for pl in a.plates] if len(a.plates) > 1 else None,
+                              "placas_sao": {"sizes": "tamanhos", "parts": "partes"}.get(a.plates_mode) if len(a.plates) > 1 else None,
+                              "decidir_placas": a.plates_pending,
                               "erro": a.parse_error or None} for a in part.assets.all()],
             } for part in p.all_parts()],
             "fotos": [{"id": a.pk, "nome": a.name, "principal": a.is_main} for a in p.assets.filter(kind__in=["photo", "render"])],
@@ -604,6 +610,33 @@ def cadastrar_produto_completo(user, base, nome, produto="", categoria="", orige
                      "avisos": [m for m in (v.cost_breakdown or {}).get("problemas", []) if "estimativa manual" not in m]})
     return {"criado": created, "sku_base": p.sku_base, "nome": p.name, "alteracoes": log, "variantes": site,
             "ficha": _url(base, "catalog:product_detail", p.pk)}
+
+
+@tool("definir_placas",
+      "Para um 3MF fatiado com várias placas: diz se as placas são TAMANHOS diferentes do mesmo objeto (cada placa vira "
+      "uma peça com o custo dela e cada tamanho uma variante) ou PARTES do mesmo objeto (custo somado na mesma peça). "
+      "Pergunte ao usuário antes se não estiver claro (nomes como '100%'/'70%' indicam tamanhos).", {
+          "produto": S, "peca_id": I,
+          "modo": {"type": "string", "enum": ["tamanhos", "partes"]},
+          "tamanhos": {"type": "array", "items": S, "description": "um por placa, na ordem (ex.: ['G','P']); padrão = nome das placas"},
+          "filamento_principal": {**S, "description": "obrigatório em 'tamanhos' se o produto ainda não tem variante"},
+      }, ["produto", "peca_id", "modo"])
+def definir_placas(user, base, produto, peca_id, modo, tamanhos=None, filamento_principal=""):
+    from apps.catalog.views import _refresh_plate_names
+
+    p = _product(produto)
+    part = next((x for x in p.all_parts() if x.pk == int(peca_id)), None)
+    if part is None:
+        raise ToolError("Peça não encontrada neste produto (veja ver_produto).")
+    asset = part.production_assets().first()
+    if asset is not None:
+        _refresh_plate_names(asset)
+    try:
+        log = workflow.apply_plates(part, {"tamanhos": Asset.PLATES_SIZES, "partes": Asset.PLATES_PARTS}[modo],
+                                    tamanhos, _filament(filamento_principal))
+    except workflow.PlatesError as exc:
+        raise ToolError(str(exc))
+    return {"feito": log, **_product_info(p, base)}
 
 
 # --- escrita: variantes e preço -------------------------------------------------

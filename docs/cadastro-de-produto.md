@@ -31,6 +31,22 @@ que muda o custo é salvo — não existe mais botão "Recalcular" obrigatório.
 5. **Fotos**: escolha uma ou várias e **Enviar fotos**. A primeira vira a principal; a estrela troca.
 6. **Publicar**: **Ativar produto**. Com tudo verde ele entra no catálogo em PDF, na loja e no envio ao Tiny.
 
+### 3MF com várias placas
+
+Quando o 3MF fatiado tem mais de uma placa, o sistema pergunta o que elas são (a etapa de peças fica
+pendente até responder; até lá o custo soma as placas):
+
+- **Tamanhos diferentes do mesmo objeto** (ex.: placas "100%" e "70%"): cada placa vira uma peça com o
+  custo só daquela placa e "só nos tamanhos" daquele tamanho, e cada tamanho vira uma variante (copiando
+  filamentos e componentes da variante que já existe, ou com o filamento escolhido).
+- **Partes do mesmo objeto** (ex.: corpo numa placa, asas na outra): a peça continua uma só e o custo
+  soma as placas.
+
+### Peça sem 3MF: estimativa e tamanhos
+
+Em **Estimativa sem 3MF e tamanhos**, na linha da peça: gramas e tempo estimados (o custo usa até subir o
+3MF) e "só nos tamanhos" (ex.: G ou P, M) para a peça entrar só nas variantes daquele tamanho.
+
 ### Coleções (linha de design)
 
 A coleção agrupa peças de funções e categorias diferentes que dividem o mesmo desenho, por exemplo a

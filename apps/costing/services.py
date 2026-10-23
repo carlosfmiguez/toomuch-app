@@ -62,7 +62,10 @@ def build_cost_input(variant: Variant, printer: Printer | None = None, params: G
             problems.append(CostProblem(f"Filamento '{filament}' sem custo médio (registre uma compra)."))
 
         if asset is not None:
-            grams, hours = Decimal(asset.grams_total or 0), asset.print_hours
+            grams, hours = part.print_numbers(asset)
+            if asset.plates_pending:
+                problems.append(CostProblem(
+                    f"O 3MF da peça '{part.name}' tem {len(asset.plates)} placas: diga se são tamanhos ou partes do objeto."))
         else:
             grams, hours = Decimal(part.est_grams), Decimal(part.est_minutes or 0) / Decimal(60)
         if not grams:

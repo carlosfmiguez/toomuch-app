@@ -155,6 +155,13 @@ def read_sliced_3mf(source) -> dict:
         if not plates:
             raise ReadError("O arquivo não tem dados de fatiamento (Metadata/slice_info.config). Exporte o 3MF fatiado.")
 
+        plate_names = {}
+        if "Metadata/model_settings.config" in names:
+            try:
+                plate_names = _plate_names(z.read("Metadata/model_settings.config"))
+            except Exception:  # noqa: BLE001 - nome da placa é opcional
+                plate_names = {}
+
         thumbnail = None
         for cand in ("Metadata/plate_1.png", "Metadata/plate_1_small.png", "Metadata/top_1.png"):
             if cand in names:
@@ -192,7 +199,8 @@ def read_sliced_3mf(source) -> dict:
         "layer_height": _to_float(_first("layer_height")),
         "nozzle": _to_float(_first("nozzle_diameter")),
         "plates": [
-            {"index": p.index, "time_s": p.time_s, "weight_g": p.weight_g, "objects": p.objects,
+            {"index": p.index, "name": plate_names.get(p.index, ""), "time_s": p.time_s, "weight_g": p.weight_g,
+             "grams": round(sum(f.used_g for f in p.filaments) or p.weight_g, 2), "objects": p.objects,
              "filaments": [f.__dict__ for f in p.filaments]}
             for p in plates
         ],
@@ -204,6 +212,21 @@ def read_sliced_3mf(source) -> dict:
         "bbox_mm": bbox,
         "thumbnail_png": thumbnail,
     }
+
+
+def _plate_names(xml_bytes: bytes) -> dict[int, str]:
+    """Nome que o usuário deu a cada placa no Bambu Studio (model_settings.config → plater_name)."""
+    root = ET.fromstring(xml_bytes)
+    out: dict[int, str] = {}
+    for plate in root.findall("./plate"):
+        meta = {m.get("key"): m.get("value") for m in plate.findall("./metadata")}
+        try:
+            idx = int(meta.get("plater_id") or 0)
+        except ValueError:
+            continue
+        if idx and (meta.get("plater_name") or "").strip():
+            out[idx] = meta["plater_name"].strip()
+    return out
 
 
 def _to_float(value):

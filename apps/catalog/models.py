@@ -222,6 +222,10 @@ class Part(models.Model):
         help_text="Usado no custo enquanto não há 3MF fatiado (ex.: valor da planilha antiga).",
     )
     est_minutes = models.PositiveIntegerField("tempo estimado (min)", null=True, blank=True)
+    plate_index = models.PositiveSmallIntegerField(
+        "placa do 3MF", null=True, blank=True,
+        help_text="Quando o 3MF tem uma placa por tamanho: o custo desta peça usa só esta placa.",
+    )
 
     class Meta:
         verbose_name = "peça impressa"
@@ -233,6 +237,15 @@ class Part(models.Model):
 
     def production_assets(self):
         return self.assets.filter(kind=Asset.Kind.THREEMF_SLICED, is_production=True)
+
+    def print_numbers(self, asset: "Asset") -> tuple[Decimal, Decimal]:
+        """(gramas, horas) desta peça no 3MF: a placa dela, se tiver uma escolhida; senão o arquivo todo."""
+        if self.plate_index and len(asset.plates) > 1:
+            plate = asset.plate(self.plate_index)
+            if plate is not None:
+                hours = (Decimal(int(plate.get("time_s") or 0)) / Decimal(3600)).quantize(Decimal("0.0001"))
+                return Asset.plate_grams(plate), hours
+        return Decimal(asset.grams_total or 0), asset.print_hours
 
     @property
     def has_estimate(self) -> bool:
@@ -492,3 +505,34 @@ class Asset(models.Model):
     @property
     def print_hours(self) -> Decimal:
         return (Decimal(self.print_time_min or 0) / Decimal(60)).quantize(Decimal("0.0001"))
+
+    # --- 3MF com várias placas ---------------------------------------------------
+    PLATES_SIZES = "sizes"   # cada placa é um tamanho do mesmo objeto → uma peça por placa e uma variante por tamanho
+    PLATES_PARTS = "parts"   # as placas são partes do mesmo objeto → custo somado na mesma peça
+
+    @property
+    def plates(self) -> list[dict]:
+        return list((self.meta or {}).get("plates", []))
+
+    @property
+    def plates_mode(self) -> str:
+        return (self.meta or {}).get("plates_mode", "")
+
+    @property
+    def plates_pending(self) -> bool:
+        """3MF fatiado com 2+ placas e ninguém disse se são tamanhos ou partes."""
+        return self.kind == self.Kind.THREEMF_SLICED and len(self.plates) > 1 and not self.plates_mode
+
+    def plate(self, index: int) -> dict | None:
+        return next((p for p in self.plates if int(p.get("index") or 0) == int(index)), None)
+
+    @staticmethod
+    def plate_grams(plate: dict) -> Decimal:
+        g = plate.get("grams")
+        if g in (None, ""):
+            g = sum(float(f.get("used_g") or 0) for f in plate.get("filaments", [])) or plate.get("weight_g") or 0
+        return Decimal(str(g)).quantize(Decimal("0.01"))
+
+    @staticmethod
+    def plate_label(plate: dict) -> str:
+        return (plate.get("name") or "").strip() or f"Placa {plate.get('index')}"

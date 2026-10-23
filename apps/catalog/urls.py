@@ -19,6 +19,7 @@ urlpatterns = [
     path("peca/<int:pk>/salvar/", views.part_update, name="part_update"),
     path("peca/<int:pk>/remover/", views.part_delete, name="part_delete"),
     path("peca/<int:pk>/3mf/", views.part_upload, name="part_upload"),
+    path("peca/<int:pk>/placas/", views.part_plates, name="part_plates"),
     path("arquivo/<int:pk>/remover/", views.asset_delete, name="asset_delete"),
     path("foto/<int:pk>/principal/", views.photo_main, name="photo_main"),
     path("variante/<int:pk>/", views.variant_edit, name="variant_edit"),

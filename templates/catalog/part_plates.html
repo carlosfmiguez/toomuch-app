@@ -1,0 +1,77 @@
+{% extends "shell.html" %}
+{% load tm %}
+{% block content %}
+<div class="tm-page tm-narrow">
+  <div class="tm-head">
+    <div>
+      <div class="tm-head__eyebrow"><a class="tm-crumb" href="{% url 'catalog:product_list' %}">Produtos</a> / <a class="tm-crumb" href="{% url 'catalog:product_detail' product.pk %}?etapa=pecas">{{ product.name }}</a> / placas</div>
+      <h1 class="tm-head__title">Este 3MF tem {{ plates|length }} placas</h1>
+      <p class="tm-head__lead">{{ asset.name }} — diga o que cada placa é, para o custo sair certo.</p>
+    </div>
+  </div>
+
+  {% if decided %}<div class="tm-alert">Já decidido: {% if decided == "sizes" %}tamanhos diferentes{% else %}partes do mesmo objeto{% endif %}.</div>{% endif %}
+
+  <form method="post" class="tm-stack" data-plates>{% csrf_token %}
+    <div class="tm-choice">
+      <label class="tm-choice__opt">
+        <input type="radio" name="mode" value="sizes" required>
+        <span class="tm-choice__body">
+          <span class="material-symbols-outlined">straighten</span>
+          <strong>Tamanhos diferentes do mesmo objeto</strong>
+          <span class="tm-muted">Ex.: o mesmo anjo a 100% e a 70%. Cada placa vira uma peça com o próprio custo e cada tamanho vira uma variante.</span>
+        </span>
+      </label>
+      <label class="tm-choice__opt">
+        <input type="radio" name="mode" value="parts">
+        <span class="tm-choice__body">
+          <span class="material-symbols-outlined">join</span>
+          <strong>Partes do mesmo objeto</strong>
+          <span class="tm-muted">Ex.: corpo numa placa e asas na outra. As placas somam no custo da mesma peça.</span>
+        </span>
+      </label>
+    </div>
+
+    <section class="tm-card">
+      <div class="tm-card__body">
+        <table class="tm-table">
+          <thead><tr><th>Placa</th><th>Objetos</th><th style="text-align:right">Gramas</th><th style="text-align:right">Tempo</th><th data-sizes-only hidden>Tamanho da variante</th></tr></thead>
+          <tbody>
+            {% for p in plates %}
+            <tr>
+              <td><strong>{{ p.label }}</strong></td>
+              <td class="tm-muted tm-small">{{ p.objects|join:", "|default:"—"|truncatechars:60 }}</td>
+              <td style="text-align:right;white-space:nowrap">{{ p.grams|floatformat:"-1" }} g</td>
+              <td style="text-align:right;white-space:nowrap">{{ p.minutes|hm }}</td>
+              <td data-sizes-only hidden><input class="tm-input" name="label_{{ p.index }}" value="{{ p.label }}" maxlength="20" style="width:120px"></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <p class="tm-small tm-muted" data-sizes-only hidden style="margin:10px 0 0">O tamanho vira o nome da variante e entra no SKU (ex.: G, P ou 100%, 70%).</p>
+        {% if not has_variant %}
+        <label class="tm-field" data-sizes-only hidden style="margin-top:14px;max-width:420px"><span>Filamento das variantes <span class="tm-req">*</span></span>
+          <select class="tm-select" name="filament"><option value="">— escolha —</option>{% for f in filaments %}<option value="{{ f.pk }}">{{ f }}{% if f.avg_cost_per_g > 0 %} · R$ {{ f.avg_cost_per_kg }}/kg{% endif %}</option>{% endfor %}</select>
+          <span class="tm-field__help">O produto ainda não tem variante. Com variante, os tamanhos novos copiam os filamentos e componentes dela.</span>
+        </label>
+        {% endif %}
+      </div>
+      <div class="tm-card__foot tm-card__foot--actions">
+        <a class="tm-btn tm-btn--ghost" href="{% url 'catalog:product_detail' product.pk %}?etapa=pecas">Decidir depois</a>
+        <button class="tm-btn tm-btn--primary" type="submit"><span class="material-symbols-outlined">check</span>Confirmar</button>
+      </div>
+    </section>
+  </form>
+</div>
+<script>
+(function () {
+  var form = document.querySelector("[data-plates]");
+  function sync() {
+    var m = form.querySelector("input[name=mode]:checked");
+    form.querySelectorAll("[data-sizes-only]").forEach(function (el) { el.hidden = !(m && m.value === "sizes"); });
+  }
+  form.querySelectorAll("input[name=mode]").forEach(function (r) { r.addEventListener("change", sync); });
+  sync();
+})();
+</script>
+{% endblock %}

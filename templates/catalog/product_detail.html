@@ -112,10 +112,19 @@
             {% if p.production %}
             <div class="tm-part__file">
               <span class="tm-pill tm-pill--ok"><span class="material-symbols-outlined tm-ico-xs">check</span>3MF de produção</span>
-              <strong>{{ p.production.grams_total|floatformat:1 }} g</strong>
-              <span class="tm-sep">·</span><strong>{{ p.production.print_time_min|hm }}</strong>
+              {% if p.plate %}<strong>{{ p.plate.grams|floatformat:1 }} g</strong>
+              <span class="tm-sep">·</span><strong>{{ p.plate.minutes|hm }}</strong>
+              <span class="tm-sep">·</span><span>placa {{ p.plate.label }}</span>
+              {% else %}<strong>{{ p.production.grams_total|floatformat:1 }} g</strong>
+              <span class="tm-sep">·</span><strong>{{ p.production.print_time_min|hm }}</strong>{% if p.plates_summed %}
+              <span class="tm-sep">·</span><span>{{ p.plates_summed }} placas somadas</span>{% endif %}{% endif %}
               <span class="tm-sep">·</span><span class="tm-muted">{{ p.production.printer.name|default:"qualquer impressora" }} · v{{ p.production.version }} · {{ p.production.name|truncatechars:40 }}</span>
             </div>
+            {% if p.plates_pending %}
+            <div class="tm-alert tm-alert--warn tm-plates-ask"><span class="material-symbols-outlined">help</span>
+              <span>Este 3MF tem {{ p.production.plates|length }} placas. São tamanhos diferentes ou partes do mesmo objeto? Até decidir, o custo soma todas.</span>
+              <a class="tm-btn tm-btn--primary tm-btn--sm" href="{% url 'catalog:part_plates' p.obj.pk %}">Decidir</a></div>
+            {% endif %}
             {% elif p.obj.has_estimate %}
             <div class="tm-part__file tm-part__file--estimate"><span class="material-symbols-outlined">edit_note</span>Sem 3MF: o custo usa a estimativa
               <strong>{{ p.obj.est_grams|floatformat:"-1" }} g</strong>{% if p.obj.est_minutes %}<span class="tm-sep">·</span><strong>{{ p.obj.est_minutes|hm }}</strong>{% endif %}. Suba o 3MF para confirmar.</div>

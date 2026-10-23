@@ -26,6 +26,9 @@ def parse_asset(asset: Asset) -> Asset:
         if asset.kind == Asset.Kind.THREEMF_SLICED:
             data = readers.read_sliced_3mf(asset.file)
             thumb = data.pop("thumbnail_png", None)
+            old_mode = (asset.meta or {}).get("plates_mode")
+            if old_mode and len((asset.meta or {}).get("plates", [])) == len(data.get("plates", [])):
+                data["plates_mode"] = old_mode  # reler o mesmo arquivo não desfaz a decisão tamanhos/partes
             asset.meta = data
             asset.grams_total = readers.decimal_grams(data["grams_total"])
             asset.print_time_min = data["time_min"]
