@@ -206,6 +206,7 @@ def _product_info(p: Product, base: str, full: bool = True) -> dict:
                                          for pl in a.all_plates] if len(a.all_plates) > 1 else None,
                               "placas_sao": {"sizes": "tamanhos", "parts": "partes"}.get(a.plates_mode) if len(a.all_plates) > 1 else None,
                               "decidir_placas": a.plates_pending,
+                              "geometria": (a.meta or {}).get("geometry"),
                               "erro": a.parse_error or None} for a in part.assets.all()],
             } for part in p.all_parts()],
             "fotos": [{"id": a.pk, "nome": a.name, "principal": a.is_main} for a in p.assets.filter(kind__in=["photo", "render"])],

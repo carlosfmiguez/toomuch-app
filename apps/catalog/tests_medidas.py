@@ -38,13 +38,15 @@ SLICE_ONLY_2 = """<?xml version="1.0"?><config><plate><metadata key="index" valu
 <filament id="1" type="PLA" color="#FFFFFF" used_m="4" used_g="12.5"/></plate></config>"""
 
 
-def sliced_half_plate() -> bytes:
+def sliced_half_plate(with_mesh=True, sliced=True) -> bytes:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
-        z.writestr("3D/3dmodel.model", MAIN)
-        z.writestr("3D/Objects/object_1.model", OBJECT_FILE)
+        if with_mesh:
+            z.writestr("3D/3dmodel.model", MAIN)
+            z.writestr("3D/Objects/object_1.model", OBJECT_FILE)
         z.writestr("Metadata/model_settings.config", SETTINGS)
-        z.writestr("Metadata/slice_info.config", SLICE_ONLY_2)
+        if sliced:
+            z.writestr("Metadata/slice_info.config", SLICE_ONLY_2)
     return buf.getvalue()
 
 
@@ -107,3 +109,15 @@ class SuggestionTests(TestCase):
         self.assertIsNone(best)  # várias partes: a medida montada não sai dos arquivos
         page = self.client.get(reverse("catalog:product_detail", args=[self.product.pk]) + "?etapa=dados")
         self.assertContains(page, "use como referência")
+
+    def test_sliced_without_mesh_uses_project_3mf_from_library(self):
+        Asset.objects.create(product=self.product, part=None, kind=Asset.Kind.THREEMF_PROJECT,
+                             file=SimpleUploadedFile("anjo.3mf", sliced_half_plate(sliced=False)))
+        self.client.post(reverse("catalog:part_upload", args=[self.part.pk]), {
+            "file": SimpleUploadedFile("anjo_50.gcode.3mf", sliced_half_plate(with_mesh=False)), "printer": ""})
+        sliced = self.part.production_assets().get()
+        workflow.apply_plates(self.part, "sizes", ["G", "P"], self.fil)
+        rows, best = dims.suggestions(self.product, compute=True)
+        self.assertEqual(sorted((d.label, d.height) for d in rows), [("G", 30), ("P", 15)])
+        sliced.refresh_from_db()
+        self.assertEqual(sliced.meta["geometry"]["erro"], "o arquivo não traz a malha 3D")

@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from django.db import models
+
 from .models import Asset, Part, Product
 
 MODEL_KINDS = (Asset.Kind.THREEMF_SLICED, Asset.Kind.THREEMF_PROJECT, Asset.Kind.STL)
@@ -43,21 +45,24 @@ def ensure_geometry(asset: Asset) -> dict | None:
     from apps.files3d import readers
 
     geo = (asset.meta or {}).get("geometry")
-    if geo and geo.get("v") == readers.GEOMETRY_VERSION:
-        return geo
+    if geo and geo.get("v") == readers.GEOMETRY_VERSION and (geo.get("overall") or "erro" in geo):
+        return geo if geo.get("overall") else None
     if asset.kind not in (Asset.Kind.THREEMF_SLICED, Asset.Kind.THREEMF_PROJECT) or not asset.file:
         return None
+    error = ""
     try:
         asset.file.open("rb")
         geo = readers.read_geometry(asset.file)
-    except Exception:  # noqa: BLE001 - sugestão nunca quebra a tela
-        geo = None
+        if geo is None:
+            error = "o arquivo não traz a malha 3D"
+    except Exception as exc:  # noqa: BLE001 - sugestão nunca quebra a tela
+        geo, error = None, f"{type(exc).__name__}: {exc}"[:200]
     finally:
         try:
             asset.file.close()
         except Exception:  # noqa: BLE001
             pass
-    asset.meta = {**(asset.meta or {}), "geometry": geo or {"v": readers.GEOMETRY_VERSION, "overall": None, "plates": {}}}
+    asset.meta = {**(asset.meta or {}), "geometry": geo or {"v": readers.GEOMETRY_VERSION, "overall": None, "plates": {}, "erro": error}}
     asset.save(update_fields=["meta"])
     return geo
 
@@ -66,7 +71,7 @@ def asset_dims(asset: Asset, plate_index: int | None, label: str, compute: bool)
     if asset.kind == Asset.Kind.STL:
         return _from_box((asset.meta or {}).get("bbox_mm"), label, asset.name)
     geo = ensure_geometry(asset) if compute else (asset.meta or {}).get("geometry")
-    if not geo:
+    if not geo or not geo.get("overall"):
         return None
     plates = geo.get("plates") or {}
     if plate_index is None and asset.kind == Asset.Kind.THREEMF_SLICED and len(asset.plates) == 1:
@@ -80,6 +85,8 @@ def asset_dims(asset: Asset, plate_index: int | None, label: str, compute: bool)
 def part_dims(part: Part, compute: bool = False) -> Dims | None:
     label = part.only_sizes or part.name
     prod = part.production_assets().first()
+    if prod is not None and not part.plate_index and len(prod.plates) == 1 and len(prod.all_plates) > 1:
+        part = _with_plate(part, int(prod.plates[0].get("index") or 0))  # mede pela placa que foi fatiada
     if prod is not None:
         d = asset_dims(prod, part.plate_index, label, compute)
         if d:
@@ -89,14 +96,22 @@ def part_dims(part: Part, compute: bool = False) -> Dims | None:
         if d:
             return d
     if part.plate_index:
-        # placa ainda não fatiada (ex.: tamanho 100% de um projeto em que só a 70% foi exportada):
-        # a geometria do projeto inteiro vem dentro do 3MF da peça irmã
-        for asset in Asset.objects.filter(product=part.product, kind=Asset.Kind.THREEMF_SLICED, is_production=True):
+        # placa sem malha no próprio arquivo (não fatiada, ou 3MF fatiado sem a malha): procura a mesma placa
+        # na geometria de outro 3MF do produto — o fatiado da peça irmã ou o 3MF de projeto da biblioteca
+        others = Asset.objects.filter(product=part.product).filter(
+            models.Q(kind=Asset.Kind.THREEMF_SLICED, is_production=True) | models.Q(kind=Asset.Kind.THREEMF_PROJECT))
+        for asset in others.order_by("kind", "-created_at"):
             geo = ensure_geometry(asset) if compute else (asset.meta or {}).get("geometry")
             box = ((geo or {}).get("plates") or {}).get(str(part.plate_index))
             if box:
                 return _from_box(box, label, f"{asset.name} (placa {part.plate_index})")
     return None
+
+
+def _with_plate(part: Part, index: int) -> Part:
+    clone = Part(pk=part.pk, product=part.product, name=part.name, only_sizes=part.only_sizes, plate_index=index or None)
+    clone._state.adding = False
+    return clone
 
 
 def suggestions(product: Product, compute: bool = False) -> tuple[list[Dims], Dims | None]:
