@@ -173,7 +173,7 @@ def read_sliced_3mf(source) -> dict:
         bbox = geometry = None
         try:
             bbox = _bbox_from_model_files(z)
-            geometry = _geometry(z)
+            geometry = _geometry(z) or _geometry_from_slices(z)
         except Exception:  # noqa: BLE001 - geometria é opcional
             pass
 
@@ -425,9 +425,49 @@ def _geometry(z: zipfile.ZipFile) -> dict | None:
     return {"v": GEOMETRY_VERSION, "overall": union(items), "plates": plates, "items": len(items)}
 
 
+_MAX_Z = re.compile(r";\s*max_z_height\s*[:=]\s*([\d.]+)")
+
+
+def _geometry_from_slices(z: zipfile.ZipFile) -> dict | None:
+    """
+    3MF fatiado do Bambu não traz a malha: usa, por placa, a área ocupada na mesa (Metadata/plate_N.json →
+    bbox_all ou bbox_objects) e a altura do cabeçalho do G-code (max_z_height). Lê só o início do G-code.
+    """
+    names = set(z.namelist())
+    plates = {}
+    for name in sorted(names):
+        m = re.fullmatch(r"Metadata/plate_(\d+)\.json", name)
+        if not m:
+            continue
+        idx = m.group(1)
+        try:
+            data = json.loads(z.read(name).decode("utf-8", "replace"))
+        except (json.JSONDecodeError, KeyError):
+            continue
+        box = data.get("bbox_all")
+        if not box and data.get("bbox_objects"):
+            bs = [o.get("bbox") for o in data["bbox_objects"] if o.get("bbox")]
+            if bs:
+                box = [min(b[0] for b in bs), min(b[1] for b in bs), max(b[2] for b in bs), max(b[3] for b in bs)]
+        height = None
+        gname = f"Metadata/plate_{idx}.gcode"
+        if gname in names:
+            with z.open(gname) as fh:
+                head = fh.read(256 * 1024).decode("utf-8", "replace")
+            if hit := _MAX_Z.search(head):
+                height = float(hit.group(1))
+        if box and len(box) == 4 and height:
+            plates[idx] = {"x": round(box[2] - box[0], 1), "y": round(box[3] - box[1], 1), "z": round(height, 1)}
+    if not plates:
+        return None
+    first = plates[sorted(plates, key=int)[0]]
+    return {"v": GEOMETRY_VERSION, "overall": first if len(plates) == 1 else None, "plates": plates,
+            "items": 0, "fonte": "fatiamento (área na mesa + altura do G-code)"}
+
+
 def read_geometry(source) -> dict | None:
     with _open_zip(source) as z:
-        return _geometry(z)
+        return _geometry(z) or _geometry_from_slices(z)
 
 
 def read_project_3mf(source) -> dict:

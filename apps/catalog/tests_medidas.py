@@ -38,7 +38,7 @@ SLICE_ONLY_2 = """<?xml version="1.0"?><config><plate><metadata key="index" valu
 <filament id="1" type="PLA" color="#FFFFFF" used_m="4" used_g="12.5"/></plate></config>"""
 
 
-def sliced_half_plate(with_mesh=True, sliced=True) -> bytes:
+def sliced_half_plate(with_mesh=True, sliced=True, bambu_json=False) -> bytes:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
         if with_mesh:
@@ -47,6 +47,9 @@ def sliced_half_plate(with_mesh=True, sliced=True) -> bytes:
         z.writestr("Metadata/model_settings.config", SETTINGS)
         if sliced:
             z.writestr("Metadata/slice_info.config", SLICE_ONLY_2)
+        if bambu_json:  # como o Bambu grava no .gcode.3mf: área na mesa + cabeçalho do G-code
+            z.writestr("Metadata/plate_2.json", '{"bbox_all": [120.0, 95.0, 130.0, 100.0], "bbox_objects": []}')
+            z.writestr("Metadata/plate_2.gcode", "; HEADER_BLOCK_START\n; max_z_height: 15.00\n; HEADER_BLOCK_END\nG28\n")
     return buf.getvalue()
 
 
@@ -121,3 +124,17 @@ class SuggestionTests(TestCase):
         self.assertEqual(sorted((d.label, d.height) for d in rows), [("G", 30), ("P", 15)])
         sliced.refresh_from_db()
         self.assertEqual(sliced.meta["geometry"]["erro"], "o arquivo não traz a malha 3D")
+
+    def test_bambu_sliced_without_mesh_uses_plate_json_and_gcode_height(self):
+        geo = readers.read_geometry(io.BytesIO(sliced_half_plate(with_mesh=False, bambu_json=True)))
+        self.assertEqual(geo["plates"]["2"], {"x": 10.0, "y": 5.0, "z": 15.0})
+        self.client.post(reverse("catalog:part_upload", args=[self.part.pk]), {
+            "file": SimpleUploadedFile("anjo_50.gcode.3mf", sliced_half_plate(with_mesh=False, bambu_json=True)), "printer": ""})
+        workflow.apply_plates(self.part, "sizes", ["G", "P"], self.fil)
+        rows, best = dims.suggestions(self.product, compute=True)
+        self.assertEqual([(d.label, d.height, d.width, d.depth) for d in rows if d.label == "P"], [("P", 15, 10, 5)])
+        # tentativa antiga que só olhou a malha é refeita
+        asset = self.part.production_assets().get()
+        asset.meta = {**asset.meta, "geometry": {"v": 2, "overall": None, "plates": {}, "erro": "o arquivo não traz a malha 3D"}}
+        asset.save(update_fields=["meta"])
+        self.assertEqual(dims.ensure_geometry(asset)["plates"]["2"]["z"], 15.0)

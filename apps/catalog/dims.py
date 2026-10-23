@@ -45,8 +45,9 @@ def ensure_geometry(asset: Asset) -> dict | None:
     from apps.files3d import readers
 
     geo = (asset.meta or {}).get("geometry")
-    if geo and geo.get("v") == readers.GEOMETRY_VERSION and (geo.get("overall") or "erro" in geo):
-        return geo if geo.get("overall") else None
+    measured = bool(geo and (geo.get("overall") or geo.get("plates")))
+    if geo and geo.get("v") == readers.GEOMETRY_VERSION and (measured or geo.get("checked_slices")):
+        return geo if measured else None  # já medido, ou já tentou tudo (malha e dados do fatiamento) sem sucesso
     if asset.kind not in (Asset.Kind.THREEMF_SLICED, Asset.Kind.THREEMF_PROJECT) or not asset.file:
         return None
     error = ""
@@ -62,7 +63,8 @@ def ensure_geometry(asset: Asset) -> dict | None:
             asset.file.close()
         except Exception:  # noqa: BLE001
             pass
-    asset.meta = {**(asset.meta or {}), "geometry": geo or {"v": readers.GEOMETRY_VERSION, "overall": None, "plates": {}, "erro": error}}
+    asset.meta = {**(asset.meta or {}), "geometry": geo or {"v": readers.GEOMETRY_VERSION, "overall": None, "plates": {},
+                                                            "erro": error, "checked_slices": True}}
     asset.save(update_fields=["meta"])
     return geo
 
@@ -71,7 +73,7 @@ def asset_dims(asset: Asset, plate_index: int | None, label: str, compute: bool)
     if asset.kind == Asset.Kind.STL:
         return _from_box((asset.meta or {}).get("bbox_mm"), label, asset.name)
     geo = ensure_geometry(asset) if compute else (asset.meta or {}).get("geometry")
-    if not geo or not geo.get("overall"):
+    if not geo or not (geo.get("overall") or geo.get("plates")):
         return None
     plates = geo.get("plates") or {}
     if plate_index is None and asset.kind == Asset.Kind.THREEMF_SLICED and len(asset.plates) == 1:
