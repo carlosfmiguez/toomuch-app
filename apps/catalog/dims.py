@@ -103,7 +103,21 @@ def suggestions(product: Product, compute: bool = False) -> tuple[list[Dims], Di
     """(medidas por peça/tamanho, sugestão para a ficha). A sugestão só existe quando é inequívoca:
     peça única, ou uma peça por tamanho (usa o maior tamanho)."""
     parts = product.all_parts()
-    rows = [d for d in (part_dims(p, compute) for p in parts) if d]
+    rows, undecided = [], []  # 3MF com várias placas ainda sem decisão: mostra cada placa só como referência
+    for p in parts:
+        prod = p.production_assets().first()
+        if prod is None or p.plate_index or len(prod.all_plates) < 2 or prod.plates_mode:
+            d = part_dims(p, compute)
+            if d:
+                rows.append(d)
+            continue
+        geo = ensure_geometry(prod) if compute else (prod.meta or {}).get("geometry")
+        for pl in prod.all_plates:
+            d = _from_box(((geo or {}).get("plates") or {}).get(str(pl.get("index"))), f"placa {Asset.plate_label(pl)}", prod.name)
+            if d:
+                undecided.append(d)
+    if undecided:
+        return rows + undecided, None
     if not rows:
         lib = [a for a in product.assets.filter(part__isnull=True, kind__in=MODEL_KINDS)]
         if len(lib) == 1:

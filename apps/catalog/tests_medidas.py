@@ -74,16 +74,20 @@ class SuggestionTests(TestCase):
         self.client.post(reverse("catalog:part_upload", args=[self.part.pk]), {
             "file": SimpleUploadedFile("anjo_50.gcode.3mf", sliced_half_plate()), "printer": ""})
         rows, best = dims.suggestions(self.product, compute=True)
-        self.assertEqual((best.height, best.width, best.depth), (15, 10, 5))  # só a placa fatiada, com a escala
-        self.assertIn("o 3MF sugere 15 × 10 × 5 mm", " ".join(workflow.steps_for(self.product)[0].todo))
+        self.assertIsNone(best)  # placas ainda sem decisão: cada uma só como referência
+        self.assertEqual(sorted((d.label, d.height) for d in rows), [("placa 100%", 30), ("placa 50%", 15)])
+        self.assertNotIn("o 3MF sugere", " ".join(workflow.steps_for(self.product)[0].todo))
         page = self.client.get(reverse("catalog:product_detail", args=[self.product.pk]) + "?etapa=dados")
-        self.assertContains(page, "Medidas preenchidas a partir do 3MF")
-        self.assertContains(page, 'name="height_mm" value="15"')
+        self.assertContains(page, "placa 50%")
+        self.assertNotContains(page, "Medidas preenchidas a partir do 3MF")
         # tamanhos: G (placa não fatiada) é medida pela geometria do projeto dentro do 3MF da P
         workflow.apply_plates(self.part, "sizes", ["G", "P"], self.fil)
         rows, best = dims.suggestions(self.product, compute=True)
         self.assertEqual(sorted((d.label, d.height) for d in rows), [("G", 30), ("P", 15)])
         self.assertEqual((best.label, best.height, best.width, best.depth), ("G", 30, 20, 10))
+        self.assertIn("o 3MF sugere 30 × 20 × 10 mm", " ".join(workflow.steps_for(self.product)[0].todo))
+        page = self.client.get(reverse("catalog:product_detail", args=[self.product.pk]) + "?etapa=dados")
+        self.assertContains(page, 'name="height_mm" value="30"')
         # medida já preenchida não é sobrescrita
         self.product.height_mm = 31
         self.product.save()
