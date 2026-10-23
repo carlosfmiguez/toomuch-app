@@ -170,6 +170,8 @@ LOGIN_REDIRECT_URL = "/"
 
 # Uploads de 3MF com várias placas passam de 100 MB.
 DATA_UPLOAD_MAX_MEMORY_SIZE = 320 * 1024 * 1024
+# A revisão da importação em lote manda 6 campos por produto: 200+ produtos passam do padrão (1000).
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 20000
 FILE_UPLOAD_MAX_MEMORY_SIZE = 16 * 1024 * 1024
 
 if not DEBUG:

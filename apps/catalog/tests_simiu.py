@@ -45,3 +45,39 @@ class SimiuTests(TestCase):
         out2 = io.StringIO()
         call_command("carregar_simiu_thangs", stdout=out2)
         self.assertIn("fim: 0 criados, 203 atualizados.", out2.getvalue())
+
+
+class BigReviewTests(TestCase):
+    """A revisão de um ZIP com 200+ produtos manda mais de 1000 campos: não pode dar 400."""
+
+    def test_review_with_many_products(self):
+        import tempfile
+        import zipfile
+
+        from django.contrib.auth import get_user_model
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.test import override_settings
+        from django.urls import reverse
+
+        from .tests import jpeg_bytes
+
+        call_command("seed_base", verbosity=0)
+        user = get_user_model().objects.create_superuser("carlos", "c@example.com", "senha-forte-123")
+        self.client.force_login(user)
+        buf = io.BytesIO()
+        img = jpeg_bytes()
+        with zipfile.ZipFile(buf, "w") as z:
+            for n in range(205):
+                z.writestr(f"TM-VAS-{n:03d}/foto.jpg", img)
+        with tempfile.TemporaryDirectory() as tmp, override_settings(MEDIA_ROOT=tmp):
+            r = self.client.post(reverse("catalog:import_upload"), {"zip": SimpleUploadedFile("fotos.zip", buf.getvalue())})
+            self.assertEqual(r.status_code, 302, r.content[:500])
+            page = self.client.get(reverse("catalog:import_review"))
+            data = {}
+            for p in page.context["products"]:
+                i = p["i"]
+                data.update({f"import-{i}": "on", f"name-{i}": p["sp"].name, f"cat-{i}": "VAS", f"sku-{i}": p["sp"].sku_base,
+                             f"origin-{i}": "unlicensed", f"author-{i}": "simiu"})
+            self.assertGreater(len(data), 1000)
+            r = self.client.post(reverse("catalog:import_review"), data)
+            self.assertRedirects(r, reverse("catalog:import_progress"), fetch_redirect_response=False)
