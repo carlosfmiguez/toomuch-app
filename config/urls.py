@@ -7,6 +7,8 @@ admin.site.site_header = "Sistema Toomuch"
 admin.site.site_title = "Sistema Toomuch"
 admin.site.index_title = "Painel"
 
+handler400 = "apps.core.views.bad_request"
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("apps.connector.urls")),

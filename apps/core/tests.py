@@ -108,3 +108,20 @@ class SeedAndFlowTests(TestCase):
     def test_channel_count(self):
         self.assertEqual(Channel.objects.count(), 3)
         self.assertEqual(PriceByChannel.objects.filter(variant=self.variant).count(), 3)
+
+
+class BadRequestHandlerTests(TestCase):
+    def test_staff_sees_reason(self):
+        from django.contrib.auth import get_user_model
+        from django.core.exceptions import SuspiciousFileOperation
+        from django.test import RequestFactory
+
+        from apps.core.views import bad_request
+
+        req = RequestFactory().get("/x/")
+        req.user = get_user_model()(username="a", is_staff=True)
+        resp = bad_request(req, SuspiciousFileOperation("caminho fora da pasta"))
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("SuspiciousFileOperation: caminho fora da pasta", resp.content.decode())
+        req.user = get_user_model()(username="b", is_staff=False)
+        self.assertNotIn("caminho", bad_request(req, SuspiciousFileOperation("caminho")).content.decode())
