@@ -5,7 +5,7 @@
   <div class="tm-head">
     <div>
       <div class="tm-head__eyebrow"><a class="tm-crumb" href="{% url 'catalog:product_list' %}">Produtos</a> / <a class="tm-crumb" href="{% url 'catalog:product_detail' product.pk %}?etapa=pecas">{{ product.name }}</a> / placas</div>
-      <h1 class="tm-head__title">Este 3MF tem {{ plates|length }} placas</h1>
+      <h1 class="tm-head__title">O projeto deste 3MF tem {{ plates|length }} placas</h1>
       <p class="tm-head__lead">{{ asset.name }} — diga o que cada placa é, para o custo sair certo.</p>
     </div>
   </div>
@@ -41,8 +41,9 @@
             <tr>
               <td><strong>{{ p.label }}</strong></td>
               <td class="tm-muted tm-small">{{ p.objects|join:", "|default:"—"|truncatechars:60 }}</td>
-              <td style="text-align:right;white-space:nowrap">{{ p.grams|floatformat:"-1" }} g</td>
+              {% if p.sliced %}<td style="text-align:right;white-space:nowrap">{{ p.grams|floatformat:"-1" }} g</td>
               <td style="text-align:right;white-space:nowrap">{{ p.minutes|hm }}</td>
+              {% else %}<td colspan="2" class="tm-muted tm-small" style="text-align:right">não fatiada neste arquivo — vira peça esperando o 3MF dela</td>{% endif %}
               <td data-sizes-only hidden><input class="tm-input" name="label_{{ p.index }}" value="{{ p.label }}" maxlength="20" style="width:120px"></td>
             </tr>
             {% endfor %}

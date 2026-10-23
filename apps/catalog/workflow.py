@@ -60,8 +60,8 @@ def steps_for(product: Product) -> list[Step]:
     for p in parts:
         prod_asset = p.production_assets().first()
         if prod_asset is not None and prod_asset.plates_pending:
-            labels = ", ".join(Asset.plate_label(pl) for pl in prod_asset.plates)
-            todo.append(f"O 3MF da peça “{p.name}” tem {len(prod_asset.plates)} placas ({labels}): "
+            labels = ", ".join(Asset.plate_label(pl) + ("" if pl["sliced"] else " — não fatiada") for pl in prod_asset.all_plates)
+            todo.append(f"O projeto do 3MF da peça “{p.name}” tem {len(prod_asset.all_plates)} placas ({labels}): "
                         "diga se são tamanhos diferentes ou partes do mesmo objeto.")
         if not p.production_assets().exists():
             if p.has_estimate:
@@ -220,32 +220,53 @@ def plates_to_decide(product: Product) -> list[tuple[Part, Asset]]:
 
 def apply_plates(part: Part, mode: str, labels: list[str] | None = None, filament=None) -> list[str]:
     """
-    Resolve um 3MF de produção com várias placas.
+    Resolve um 3MF de produção de um projeto com várias placas (fatiadas neste arquivo ou não).
 
-    - parts: as placas são partes do mesmo objeto → a peça continua uma só e o custo soma as placas.
-    - sizes: cada placa é um tamanho → a peça fica com a 1ª placa e ganha uma irmã por placa (mesmo arquivo,
-      'placa do 3MF' e 'só nos tamanhos' próprios); cada tamanho vira variante (copiando filamentos da
-      variante padrão, ou com o filamento informado se o produto ainda não tem variante).
-    Retorna um resumo do que foi feito.
+    - parts: as placas são partes do mesmo objeto → as fatiadas somam no custo desta peça; cada placa
+      não fatiada vira uma peça nova do produto, esperando o próprio 3MF.
+    - sizes: cada placa é um tamanho → esta peça fica com a 1ª placa fatiada; as outras placas viram peças
+      irmãs (as fatiadas reaproveitam o arquivo, as não fatiadas esperam o 3MF), cada uma 'só no tamanho'
+      dela; cada tamanho vira variante (copiando filamentos e componentes da variante padrão, ou com o
+      filamento informado se o produto ainda não tem variante).
+    `labels`: um nome por placa, na ordem de all_plates (padrão: nome da placa).
     """
     from django.db import transaction
 
     asset = part.production_assets().first()
-    if asset is None or len(asset.plates) < 2:
-        raise PlatesError("Esta peça não tem um 3MF de produção com mais de uma placa.")
+    if asset is None or len(asset.all_plates) < 2:
+        raise PlatesError("Esta peça não tem um 3MF de produção de um projeto com mais de uma placa.")
     product = part.product
+    plates = asset.all_plates
     log: list[str] = []
+    multi_sliced = len(asset.plates) > 1
+
+    def copy_asset(target: Part, meta: dict) -> None:
+        Asset.objects.create(
+            product=product, part=target, kind=asset.kind, file=asset.file.name, name=asset.name, version=asset.version,
+            sha256=asset.sha256, size_bytes=asset.size_bytes, printer=asset.printer, is_production=True,
+            thumbnail=asset.thumbnail.name if asset.thumbnail else "", grams_total=asset.grams_total,
+            print_time_min=asset.print_time_min, meta=meta, parsed_at=asset.parsed_at, uploaded_by=asset.uploaded_by,
+        )
+
     if mode == Asset.PLATES_PARTS:
-        asset.meta = {**asset.meta, "plates_mode": Asset.PLATES_PARTS}
-        asset.save(update_fields=["meta"])
-        part.plate_index = None
-        part.save(update_fields=["plate_index"])
-        refresh_product(product)
-        return [f"{len(asset.plates)} placas somadas no custo da peça “{part.name}”."]
+        with transaction.atomic():
+            asset.meta = {**asset.meta, "plates_mode": Asset.PLATES_PARTS}
+            asset.save(update_fields=["meta"])
+            part.plate_index = None
+            part.save(update_fields=["plate_index"])
+            if multi_sliced:
+                log.append(f"{len(asset.plates)} placas fatiadas somadas no custo da peça “{part.name}”")
+            for pl in asset.unsliced_plates:
+                name = (Asset.plate_label(pl))[:80]
+                if not product.parts.filter(name__iexact=name).exists():
+                    Part.objects.create(product=product, name=name, default_qty=part.default_qty, color_slot=part.color_slot)
+                    log.append(f"peça “{name}” criada (placa não fatiada: suba o 3MF dela)")
+            sync_bom_with_parts(product)
+            refresh_product(product)
+        return log
 
     if mode != Asset.PLATES_SIZES:
         raise PlatesError("Modo inválido.")
-    plates = asset.plates
     labels = [(x or "").strip() for x in (labels or [])] or [Asset.plate_label(p) for p in plates]
     if len(labels) != len(plates) or any(not x for x in labels):
         raise PlatesError("Informe um tamanho para cada placa.")
@@ -260,34 +281,36 @@ def apply_plates(part: Part, mode: str, labels: list[str] | None = None, filamen
         mode_meta = {**asset.meta, "plates_mode": Asset.PLATES_SIZES}
         asset.meta = mode_meta
         asset.save(update_fields=["meta"])
-        part.plate_index = int(plates[0]["index"])
-        part.only_sizes = labels[0]
-        part.name = f"{base} {labels[0]}"[:80]
-        part.save()
-        log.append(f"peça “{part.name}” usa a placa {Asset.plate_label(plates[0])}")
-        for plate, label in zip(plates[1:], labels[1:]):
+        own_i = next(i for i, p in enumerate(plates) if p["sliced"])
+        for i, (pl, label) in enumerate(zip(plates, labels)):
+            if i == own_i:
+                part.plate_index = int(pl["index"]) if multi_sliced else None
+                part.only_sizes = label
+                part.name = f"{base} {label}"[:80]
+                part.save()
+                log.append(f"peça “{part.name}” usa a placa {Asset.plate_label(pl)}")
+                continue
             sib = Part.objects.create(
                 product=product, name=f"{base} {label}"[:80], default_qty=part.default_qty, color_slot=part.color_slot,
                 waste_pct_override=part.waste_pct_override, failure_pct_override=part.failure_pct_override,
-                plate_index=int(plate["index"]), only_sizes=label,
+                plate_index=int(pl["index"]) if pl["sliced"] else None, only_sizes=label,
             )
-            Asset.objects.create(
-                product=product, part=sib, kind=asset.kind, file=asset.file.name, name=asset.name, version=asset.version,
-                sha256=asset.sha256, size_bytes=asset.size_bytes, printer=asset.printer, is_production=True,
-                thumbnail=asset.thumbnail.name if asset.thumbnail else "", grams_total=asset.grams_total,
-                print_time_min=asset.print_time_min, meta=mode_meta, parsed_at=asset.parsed_at, uploaded_by=asset.uploaded_by,
-            )
-            log.append(f"peça “{sib.name}” criada com a placa {Asset.plate_label(plate)}")
+            if pl["sliced"]:
+                copy_asset(sib, mode_meta)
+                log.append(f"peça “{sib.name}” criada com a placa {Asset.plate_label(pl)}")
+            else:
+                log.append(f"peça “{sib.name}” criada (placa {Asset.plate_label(pl)} não fatiada: suba o 3MF dela)")
 
-        # variantes: a 'Único' (sem pedido) vira o 1º tamanho; os demais são criados
+        # variantes: a 'Único' (sem pedido) vira o tamanho da placa fatiada; os demais são criados
         existing = {v.size.strip().upper(): v for v in product.variants.all()}
         unico = existing.get("ÚNICO") or existing.get("UNICO")
-        if unico is not None and labels[0].upper() not in existing and not unico.orders.exists():
-            unico.size = labels[0]
-            unico.sku = suggest_variant_sku(product, labels[0], unico.primary_color, exclude_pk=unico.pk)
+        first = labels[own_i]
+        if unico is not None and first.upper() not in existing and not unico.orders.exists():
+            unico.size = first
+            unico.sku = suggest_variant_sku(product, first, unico.primary_color, exclude_pk=unico.pk)
             unico.save(update_fields=["size", "sku"])
             existing = {v.size.strip().upper(): v for v in product.variants.all()}
-            log.append(f"variante única virou o tamanho {labels[0]} ({unico.sku})")
+            log.append(f"variante única virou o tamanho {first} ({unico.sku})")
         for label in labels:
             if label.upper() in existing:
                 continue
@@ -304,6 +327,7 @@ def apply_plates(part: Part, mode: str, labels: list[str] | None = None, filamen
             if src is not None:  # componentes comprados (LED, caixa...) vão junto
                 for item in src.bom_items.filter(kind="component"):
                     v.bom_items.create(kind=item.kind, component=item.component, quantity=item.quantity)
+            existing[label.upper()] = v
             log.append(f"variante {v.sku} criada")
         sync_bom_with_parts(product)
         refresh_product(product)

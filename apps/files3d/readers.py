@@ -155,12 +155,14 @@ def read_sliced_3mf(source) -> dict:
         if not plates:
             raise ReadError("O arquivo não tem dados de fatiamento (Metadata/slice_info.config). Exporte o 3MF fatiado.")
 
-        plate_names = {}
+        plate_names: dict[int, str] = {}
+        project_plates: dict[int, str] = {}
         if "Metadata/model_settings.config" in names:
             try:
-                plate_names = _plate_names(z.read("Metadata/model_settings.config"))
+                project_plates = _project_plates(z.read("Metadata/model_settings.config"))
+                plate_names = {i: n for i, n in project_plates.items() if n}
             except Exception:  # noqa: BLE001 - nome da placa é opcional
-                plate_names = {}
+                plate_names, project_plates = {}, {}
 
         thumbnail = None
         for cand in ("Metadata/plate_1.png", "Metadata/plate_1_small.png", "Metadata/top_1.png"):
@@ -204,6 +206,8 @@ def read_sliced_3mf(source) -> dict:
              "filaments": [f.__dict__ for f in p.filaments]}
             for p in plates
         ],
+        # todas as placas do projeto (inclusive as que não foram fatiadas neste arquivo)
+        "project_plates": [{"index": i, "name": n} for i, n in sorted(project_plates.items())],
         "filaments": filaments,
         "grams_total": grams_total,
         "time_s": time_s,
@@ -214,8 +218,8 @@ def read_sliced_3mf(source) -> dict:
     }
 
 
-def _plate_names(xml_bytes: bytes) -> dict[int, str]:
-    """Nome que o usuário deu a cada placa no Bambu Studio (model_settings.config → plater_name)."""
+def _project_plates(xml_bytes: bytes) -> dict[int, str]:
+    """Placas do projeto no Bambu Studio e o nome de cada uma (model_settings.config → plater_id/plater_name)."""
     root = ET.fromstring(xml_bytes)
     out: dict[int, str] = {}
     for plate in root.findall("./plate"):
@@ -224,8 +228,8 @@ def _plate_names(xml_bytes: bytes) -> dict[int, str]:
             idx = int(meta.get("plater_id") or 0)
         except ValueError:
             continue
-        if idx and (meta.get("plater_name") or "").strip():
-            out[idx] = meta["plater_name"].strip()
+        if idx:
+            out[idx] = (meta.get("plater_name") or "").strip()
     return out
 
 

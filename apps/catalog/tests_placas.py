@@ -37,6 +37,21 @@ def two_plate_3mf() -> bytes:
     return buf.getvalue()
 
 
+def one_of_two_plates_3mf() -> bytes:
+    """Exportou só a placa '70%' (2) de um projeto com '100%' e '70%'."""
+    from apps.files3d.tests import SLICE_INFO
+
+    only2 = SLICE_INFO.split("<plate>")[0] + "<plate>" + SLICE_INFO.split("<plate>")[2]
+    only2 = only2.replace('used_g="110.00"', 'used_g="38.90"').replace('value="110.00"', 'value="38.90"')
+    src = zipfile.ZipFile(io.BytesIO(make_3mf()))
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        for n in src.namelist():
+            z.writestr(n, only2 if n == "Metadata/slice_info.config" else src.read(n))
+        z.writestr("Metadata/model_settings.config", MODEL_SETTINGS)
+    return buf.getvalue()
+
+
 @override_settings(MEDIA_ROOT=TMP)
 class PlatesTests(TestCase):
     @classmethod
@@ -130,3 +145,31 @@ class PlatesTests(TestCase):
         out = call("definir_placas", produto="TM-REL-ALD", peca_id=self.part.pk, modo="tamanhos",
                    tamanhos=["G", "P"], filamento_principal=str(self.fil.pk))
         self.assertEqual(sorted(v["sku"] for v in out["variantes"]), ["TM-REL-ALD-G", "TM-REL-ALD-P"])
+
+    def test_only_one_plate_sliced_still_asks(self):
+        resp = self.client.post(reverse("catalog:part_upload", args=[self.part.pk]), {
+            "file": SimpleUploadedFile("Anjo._70.gcode.3mf", one_of_two_plates_3mf()), "printer": ""})
+        self.assertRedirects(resp, reverse("catalog:part_plates", args=[self.part.pk]), fetch_redirect_response=False)
+        asset = self.part.production_assets().get()
+        self.assertEqual(asset.grams_total, Decimal("38.90"))
+        self.assertEqual([(p["index"], p["sliced"]) for p in asset.all_plates], [(1, False), (2, True)])
+        page = self.client.get(reverse("catalog:part_plates", args=[self.part.pk]))
+        self.assertContains(page, "não fatiada neste arquivo")
+        log = workflow.apply_plates(self.part, "sizes", ["G", "P"], self.fil)
+        self.part.refresh_from_db()
+        self.assertEqual((self.part.name, self.part.only_sizes, self.part.plate_index), ("Anjo LED canelado P", "P", None))
+        g_part = self.product.parts.get(name="Anjo LED canelado G")
+        self.assertFalse(g_part.production_assets().exists())
+        self.assertTrue(any("não fatiada" in x for x in log))
+        p = Variant.objects.get(product=self.product, size="P")
+        g = Variant.objects.get(product=self.product, size="G")
+        self.assertEqual(Decimal([ln for ln in p.cost_breakdown["linhas"] if ln["tipo"] == "filamento"][0]["gramas"]), Decimal("38.90"))
+        self.assertTrue(any("sem 3MF" in m for m in g.cost_breakdown["problemas"]))
+        steps = {s.key: s for s in workflow.steps_for(self.product)}
+        self.assertEqual(steps["pecas"].todo, ["Suba o 3MF fatiado da peça “Anjo LED canelado G”."])
+
+    def test_parts_mode_creates_part_for_unsliced_plate(self):
+        self.client.post(reverse("catalog:part_upload", args=[self.part.pk]), {
+            "file": SimpleUploadedFile("Anjo._70.gcode.3mf", one_of_two_plates_3mf()), "printer": ""})
+        workflow.apply_plates(self.part, "parts")
+        self.assertEqual(sorted(p.name for p in self.product.parts.all()), ["100%", "Peça única"])

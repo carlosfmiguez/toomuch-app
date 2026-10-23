@@ -375,7 +375,7 @@ def part_upload(request, pk):
         for other in part.shared_in.all():
             workflow.refresh_product(other)
         if asset.plates_pending:
-            messages.info(request, f"O 3MF tem {len(asset.plates)} placas. Diga se são tamanhos diferentes ou partes do mesmo objeto.")
+            messages.info(request, f"O projeto deste 3MF tem {len(asset.all_plates)} placas. Diga se são tamanhos diferentes ou partes do mesmo objeto.")
             return redirect("catalog:part_plates", pk=part.pk)
         messages.success(request, f"{part.name}: {asset.grams_total} g e {asset.print_time_min} min lidos do 3MF. Custo recalculado.")
     return redirect(_safe_next(request, _ficha(part.product_id, "pecas")))
@@ -383,7 +383,7 @@ def part_upload(request, pk):
 
 def _refresh_plate_names(asset: Asset) -> Asset:
     """Arquivos lidos antes da versão que guarda nome e gramas por placa: relê uma vez."""
-    if asset.plates and any("grams" not in p for p in asset.plates):
+    if asset.plates and ("project_plates" not in (asset.meta or {}) or any("grams" not in p for p in asset.plates)):
         parse_asset(asset)
         asset.refresh_from_db()
     return asset
@@ -394,7 +394,7 @@ def part_plates(request, pk):
     part = get_object_or_404(Part.objects.select_related("product"), pk=pk)
     product = part.product
     asset = part.production_assets().first()
-    if asset is None or len(asset.plates) < 2:
+    if asset is None or len(asset.all_plates) < 2:
         messages.info(request, "Esta peça não tem 3MF com mais de uma placa.")
         return redirect(_ficha(product.pk, "pecas"))
     asset = _refresh_plate_names(asset)
@@ -402,7 +402,7 @@ def part_plates(request, pk):
     filaments = FilamentSKU.objects.filter(active=True).order_by("brand", "material", "color_name")
     if request.method == "POST":
         mode = request.POST.get("mode")
-        labels = [request.POST.get(f"label_{p['index']}", "") for p in asset.plates]
+        labels = [request.POST.get(f"label_{p['index']}", "") for p in asset.all_plates]
         fil = filaments.filter(pk=request.POST.get("filament") or 0).first()
         try:
             log = workflow.apply_plates(part, mode, labels, fil)
@@ -412,9 +412,11 @@ def part_plates(request, pk):
             messages.success(request, " · ".join(log[:6]) + (" …" if len(log) > 6 else ""))
             return redirect(_ficha(product.pk, "variantes" if mode == Asset.PLATES_SIZES else "pecas"))
     plates = [{
-        "index": p["index"], "label": Asset.plate_label(p), "grams": Asset.plate_grams(p),
-        "minutes": round(int(p.get("time_s") or 0) / 60), "objects": [o for o in p.get("objects", []) if o],
-    } for p in asset.plates]
+        "index": p["index"], "label": Asset.plate_label(p), "sliced": p["sliced"],
+        "grams": Asset.plate_grams(p) if p["sliced"] else None,
+        "minutes": round(int(p.get("time_s") or 0) / 60) if p["sliced"] else None,
+        "objects": [o for o in p.get("objects", []) if o],
+    } for p in asset.all_plates]
     return render(request, "catalog/part_plates.html", {
         **shell(request, f"Placas · {part.name}"), "part": part, "product": product, "asset": asset, "plates": plates,
         "has_variant": has_variant, "filaments": filaments, "decided": asset.plates_mode,

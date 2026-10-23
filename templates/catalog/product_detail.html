@@ -122,7 +122,7 @@
             </div>
             {% if p.plates_pending %}
             <div class="tm-alert tm-alert--warn tm-plates-ask"><span class="material-symbols-outlined">help</span>
-              <span>Este 3MF tem {{ p.production.plates|length }} placas. São tamanhos diferentes ou partes do mesmo objeto? Até decidir, o custo soma todas.</span>
+              <span>O projeto deste 3MF tem {{ p.production.all_plates|length }} placas{% if p.production.unsliced_plates %} (só {{ p.production.plates|length }} fatiada{{ p.production.plates|length|pluralize }} aqui){% endif %}. São tamanhos diferentes ou partes do mesmo objeto?</span>
               <a class="tm-btn tm-btn--primary tm-btn--sm" href="{% url 'catalog:part_plates' p.obj.pk %}">Decidir</a></div>
             {% endif %}
             {% elif p.obj.has_estimate %}

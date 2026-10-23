@@ -519,9 +519,21 @@ class Asset(models.Model):
         return (self.meta or {}).get("plates_mode", "")
 
     @property
+    def unsliced_plates(self) -> list[dict]:
+        """Placas que existem no projeto mas não foram fatiadas neste arquivo (ex.: exportou só a placa '70%')."""
+        sliced = {int(p.get("index") or 0) for p in self.plates}
+        return [p for p in (self.meta or {}).get("project_plates", []) if int(p.get("index") or 0) not in sliced]
+
+    @property
+    def all_plates(self) -> list[dict]:
+        """Fatiadas e não fatiadas, em ordem; cada uma com 'sliced'."""
+        rows = [{**p, "sliced": True} for p in self.plates] + [{**p, "sliced": False} for p in self.unsliced_plates]
+        return sorted(rows, key=lambda p: int(p.get("index") or 0))
+
+    @property
     def plates_pending(self) -> bool:
-        """3MF fatiado com 2+ placas e ninguém disse se são tamanhos ou partes."""
-        return self.kind == self.Kind.THREEMF_SLICED and len(self.plates) > 1 and not self.plates_mode
+        """3MF fatiado de projeto com 2+ placas e ninguém disse se são tamanhos ou partes."""
+        return self.kind == self.Kind.THREEMF_SLICED and len(self.all_plates) > 1 and not self.plates_mode
 
     def plate(self, index: int) -> dict | None:
         return next((p for p in self.plates if int(p.get("index") or 0) == int(index)), None)

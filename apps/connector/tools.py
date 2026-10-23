@@ -191,10 +191,12 @@ def _product_info(p: Product, base: str, full: bool = True) -> dict:
                 "placa_do_3mf": part.plate_index,
                 "arquivos": [{"id": a.pk, "nome": a.name, "tipo": a.get_kind_display(), "producao": a.is_production,
                               "gramas": str(a.grams_total) if a.grams_total else None, "minutos": a.print_time_min,
-                              "placas": [{"placa": pl.get("index"), "nome": Asset.plate_label(pl), "gramas": str(Asset.plate_grams(pl)),
-                                          "minutos": round(int(pl.get("time_s") or 0) / 60), "objetos": pl.get("objects", [])}
-                                         for pl in a.plates] if len(a.plates) > 1 else None,
-                              "placas_sao": {"sizes": "tamanhos", "parts": "partes"}.get(a.plates_mode) if len(a.plates) > 1 else None,
+                              "placas": [{"placa": pl.get("index"), "nome": Asset.plate_label(pl), "fatiada": pl["sliced"],
+                                          "gramas": str(Asset.plate_grams(pl)) if pl["sliced"] else None,
+                                          "minutos": round(int(pl.get("time_s") or 0) / 60) if pl["sliced"] else None,
+                                          "objetos": pl.get("objects", [])}
+                                         for pl in a.all_plates] if len(a.all_plates) > 1 else None,
+                              "placas_sao": {"sizes": "tamanhos", "parts": "partes"}.get(a.plates_mode) if len(a.all_plates) > 1 else None,
                               "decidir_placas": a.plates_pending,
                               "erro": a.parse_error or None} for a in part.assets.all()],
             } for part in p.all_parts()],
@@ -618,7 +620,7 @@ def cadastrar_produto_completo(user, base, nome, produto="", categoria="", orige
       "Pergunte ao usuário antes se não estiver claro (nomes como '100%'/'70%' indicam tamanhos).", {
           "produto": S, "peca_id": I,
           "modo": {"type": "string", "enum": ["tamanhos", "partes"]},
-          "tamanhos": {"type": "array", "items": S, "description": "um por placa, na ordem (ex.: ['G','P']); padrão = nome das placas"},
+          "tamanhos": {"type": "array", "items": S, "description": "um por placa do projeto (fatiada ou não), na ordem (ex.: ['G','P']); padrão = nome das placas"},
           "filamento_principal": {**S, "description": "obrigatório em 'tamanhos' se o produto ainda não tem variante"},
       }, ["produto", "peca_id", "modo"])
 def definir_placas(user, base, produto, peca_id, modo, tamanhos=None, filamento_principal=""):
