@@ -167,6 +167,13 @@ def _variant_info(v: Variant) -> dict:
     }
 
 
+def _dims_info(p: Product) -> dict:
+    from apps.catalog.dims import suggestions
+
+    rows, best = suggestions(p, compute=True)
+    return {"por_peca": [d.as_dict() for d in rows], "sugerida": best.as_dict() if best else None}
+
+
 def _product_info(p: Product, base: str, full: bool = True) -> dict:
     steps = workflow.steps_for(p)
     info = {
@@ -181,6 +188,7 @@ def _product_info(p: Product, base: str, full: bool = True) -> dict:
         info.update({
             "descricao_curta": p.short_description, "descricao_longa": p.long_description, "tags": p.tags,
             "medidas_mm": [p.height_mm, p.width_mm, p.depth_mm], "peso_g": p.weight_g, "prazo_dias": p.lead_time_days,
+            "medidas_dos_arquivos": _dims_info(p),
             "licenca": {"autor": p.license_author, "link": p.license_url, "termos": p.license_terms,
                         "custo_por_unidade": str(p.license_cost_per_unit), "exige_atribuicao": p.license_attribution_required},
             "pecas": [{

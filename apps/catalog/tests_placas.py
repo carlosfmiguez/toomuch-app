@@ -158,6 +158,7 @@ class PlatesTests(TestCase):
         log = workflow.apply_plates(self.part, "sizes", ["G", "P"], self.fil)
         self.part.refresh_from_db()
         self.assertEqual((self.part.name, self.part.only_sizes, self.part.plate_index), ("Anjo LED canelado P", "P", None))
+        self.assertEqual(self.product.parts.get(name="Anjo LED canelado G").plate_index, 1)
         g_part = self.product.parts.get(name="Anjo LED canelado G")
         self.assertFalse(g_part.production_assets().exists())
         self.assertTrue(any("não fatiada" in x for x in log))

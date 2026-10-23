@@ -170,11 +170,12 @@ def read_sliced_3mf(source) -> dict:
                 thumbnail = z.read(cand)
                 break
 
-        bbox = None
+        bbox = geometry = None
         try:
             bbox = _bbox_from_model_files(z)
+            geometry = _geometry(z)
         except Exception:  # noqa: BLE001 - geometria é opcional
-            bbox = None
+            pass
 
     # consolida filamentos por extrusora
     merged: dict[int, dict] = {}
@@ -214,6 +215,7 @@ def read_sliced_3mf(source) -> dict:
         "time_min": int(round(time_s / 60)),
         "object_count": sum(len(p.objects) for p in plates),
         "bbox_mm": bbox,
+        "geometry": geometry,
         "thumbnail_png": thumbnail,
     }
 
@@ -280,12 +282,164 @@ def _bbox_from_model_files(z: zipfile.ZipFile) -> dict | None:
     return {"x": round(hi[0] - lo[0], 2), "y": round(hi[1] - lo[1], 2), "z": round(hi[2] - lo[2], 2), "vertices": count[0]}
 
 
+# --- geometria com transformações (escala/posição de cada item) e por placa -------------
+
+GEOMETRY_VERSION = 2
+_IDENTITY = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0)
+
+
+def _parse_transform(text: str | None) -> tuple:
+    try:
+        vals = tuple(float(v) for v in (text or "").split())
+    except ValueError:
+        return _IDENTITY
+    return vals if len(vals) == 12 else _IDENTITY
+
+
+def _compose(inner: tuple, outer: tuple) -> tuple:
+    """Transformação 3MF (linha × matriz 4x3): aplica `inner` e depois `outer`."""
+    a, b = inner, outer
+    out = []
+    for r in range(3):
+        for c in range(3):
+            out.append(sum(a[r * 3 + k] * b[k * 3 + c] for k in range(3)))
+    for c in range(3):
+        out.append(sum(a[9 + k] * b[k * 3 + c] for k in range(3)) + b[9 + c])
+    return tuple(out)
+
+
+def _apply_box(lo, hi, t: tuple):
+    xs = []
+    for x in (lo[0], hi[0]):
+        for y in (lo[1], hi[1]):
+            for z in (lo[2], hi[2]):
+                xs.append((x * t[0] + y * t[3] + z * t[6] + t[9],
+                           x * t[1] + y * t[4] + z * t[7] + t[10],
+                           x * t[2] + y * t[5] + z * t[8] + t[11]))
+    return [min(p[i] for p in xs) for i in range(3)], [max(p[i] for p in xs) for i in range(3)]
+
+
+def _box_dict(lo, hi) -> dict:
+    return {"x": round(hi[0] - lo[0], 1), "y": round(hi[1] - lo[1], 1), "z": round(hi[2] - lo[2], 1)}
+
+
+def _geometry(z: zipfile.ZipFile) -> dict | None:
+    """
+    Caixa de cada item do build com as transformações aplicadas (escala de placa, rotação, componentes),
+    e a caixa por placa do Bambu Studio. Mede a malha de cada objeto uma vez (expat, memória constante).
+    """
+    from xml.parsers import expat
+
+    objects: dict[tuple, dict] = {}   # (arquivo, id) -> {"lo","hi","components":[(arquivo,id,T)]}
+    build: list[tuple] = []           # (arquivo, id, T)
+    for name in z.namelist():
+        if not name.endswith(".model"):
+            continue
+        path = "/" + name
+        state = {"obj": None, "in_build": False}
+
+        def start(tag, attrs, path=path, state=state):
+            tag = tag.rsplit(":", 1)[-1] if ":" in tag and not tag.startswith("p:") else tag
+            if tag == "object":
+                state["obj"] = objects.setdefault((path, attrs.get("id")), {"lo": None, "hi": None, "components": []})
+            elif tag == "vertex" and state["obj"] is not None:
+                o = state["obj"]
+                v = (float(attrs.get("x", 0)), float(attrs.get("y", 0)), float(attrs.get("z", 0)))
+                if o["lo"] is None:
+                    o["lo"], o["hi"] = list(v), list(v)
+                else:
+                    for i in range(3):
+                        if v[i] < o["lo"][i]:
+                            o["lo"][i] = v[i]
+                        elif v[i] > o["hi"][i]:
+                            o["hi"][i] = v[i]
+            elif tag == "component" and state["obj"] is not None:
+                state["obj"]["components"].append(
+                    (attrs.get("p:path") or path, attrs.get("objectid"), _parse_transform(attrs.get("transform"))))
+            elif tag == "build":
+                state["in_build"] = True
+            elif tag == "item" and state["in_build"]:
+                build.append((attrs.get("p:path") or path, attrs.get("objectid"), _parse_transform(attrs.get("transform"))))
+
+        def end(tag, state=state):
+            if tag.endswith("object"):
+                state["obj"] = None
+            elif tag.endswith("build"):
+                state["in_build"] = False
+
+        parser = expat.ParserCreate()
+        parser.StartElementHandler = start
+        parser.EndElementHandler = end
+        with z.open(name) as fh:
+            while True:
+                chunk = fh.read(1 << 20)
+                if not chunk:
+                    break
+                parser.Parse(chunk, False)
+            parser.Parse(b"", True)
+
+    def box(key, t, depth=0):
+        o = objects.get(key)
+        if o is None or depth > 8:
+            return None
+        boxes = []
+        if o["lo"] is not None:
+            boxes.append(_apply_box(o["lo"], o["hi"], t))
+        for cpath, cid, ct in o["components"]:
+            b = box((cpath, cid), _compose(ct, t), depth + 1)
+            if b:
+                boxes.append(b)
+        if not boxes:
+            return None
+        return [min(b[0][i] for b in boxes) for i in range(3)], [max(b[1][i] for b in boxes) for i in range(3)]
+
+    items = []
+    for bpath, bid, t in build:
+        b = box((bpath, bid), t)
+        if b:
+            items.append({"objectid": bid, "lo": b[0], "hi": b[1]})
+    if not items:
+        return None
+
+    plate_objs: dict[int, set] = {}
+    if "Metadata/model_settings.config" in z.namelist():
+        try:
+            root = ET.fromstring(z.read("Metadata/model_settings.config"))
+            for plate in root.findall("./plate"):
+                meta = {m.get("key"): m.get("value") for m in plate.findall("./metadata")}
+                ids = {m.get("value") for inst in plate.findall("./model_instance")
+                       for m in inst.findall("./metadata") if m.get("key") == "object_id"}
+                if meta.get("plater_id"):
+                    plate_objs[int(meta["plater_id"])] = ids
+        except (ET.ParseError, ValueError):
+            plate_objs = {}
+
+    def union(rows):
+        return _box_dict([min(r["lo"][i] for r in rows) for i in range(3)], [max(r["hi"][i] for r in rows) for i in range(3)])
+
+    plates = {}
+    for idx, ids in plate_objs.items():
+        rows = [it for it in items if it["objectid"] in ids]
+        if rows:
+            plates[str(idx)] = union(rows)
+    return {"v": GEOMETRY_VERSION, "overall": union(items), "plates": plates, "items": len(items)}
+
+
+def read_geometry(source) -> dict | None:
+    with _open_zip(source) as z:
+        return _geometry(z)
+
+
 def read_project_3mf(source) -> dict:
     with _open_zip(source) as z:
         bbox = _bbox_from_model_files(z)
+        try:
+            geometry = _geometry(z)
+        except Exception:  # noqa: BLE001 - geometria é sugestão; nunca derruba a leitura
+            geometry = None
     if not bbox:
         raise ReadError("Nenhuma malha encontrada no 3MF.")
-    return {"bbox_mm": bbox}
+    return {"bbox_mm": bbox, "geometry": geometry}
 
 
 STL_STREAM_FROM_BYTES = 5 * 1024 * 1024

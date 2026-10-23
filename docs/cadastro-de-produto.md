@@ -31,6 +31,13 @@ que muda o custo é salvo — não existe mais botão "Recalcular" obrigatório.
 5. **Fotos**: escolha uma ou várias e **Enviar fotos**. A primeira vira a principal; a estrela troca.
 6. **Publicar**: **Ativar produto**. Com tudo verde ele entra no catálogo em PDF, na loja e no envio ao Tiny.
 
+### Medidas a partir do 3MF
+
+Na etapa **Dados**, o sistema mede os arquivos 3D (3MF fatiado ou de projeto, ou STL), aplicando escala e
+posição de cada placa: altura = Z, largura = maior lado da base, profundidade = menor. Com peça única (ou
+uma peça por tamanho, usando o maior), os campos vazios já vêm preenchidos para conferir e salvar. Com várias
+partes, a medida de cada uma aparece como referência, com o botão **Usar**. Medida já informada não é trocada.
+
 ### 3MF com várias placas
 
 Quando o 3MF fatiado tem mais de uma placa, o sistema pergunta o que elas são (a etapa de peças fica

@@ -176,11 +176,23 @@ def product_detail(request, pk):
         key = nxt.key if nxt else "publicar"
     i = keys.index(key)
     current = steps[i]
+    data_form = dim_rows = dim_best = None
+    prefilled = []
+    if key == "dados":
+        from . import dims
+
+        dim_rows, dim_best = dims.suggestions(product, compute=True)
+        data_form = ProductDataForm(instance=product)
+        if dim_best:  # campos vazios já vêm com a medida do 3MF, para conferir e salvar
+            for field, value in (("height_mm", dim_best.height), ("width_mm", dim_best.width), ("depth_mm", dim_best.depth)):
+                if not getattr(product, field) and value:
+                    data_form.initial[field] = value
+                    prefilled.append(field)
     return render(request, "catalog/product_detail.html", {
         **shell(request, product.name),
         "product": product, "steps": steps, "next": nxt, "step": current,
         "prev_step": steps[i - 1] if i > 0 else None, "next_in_order": steps[i + 1] if i + 1 < len(steps) else None,
-        "data_form": ProductDataForm(instance=product) if key == "dados" else None,
+        "data_form": data_form, "dim_rows": dim_rows, "dim_best": dim_best, "dims_prefilled": prefilled,
         "parts": parts, "has_secondary": has_secondary, "library_parts": library_parts, "library_files": library_files, "new_part_form": PartForm(prefix="new"),
         "file_form": PartFileForm(), "variants": variants, "variant_form": vform, "photos": photos,
         "no_cost_filaments": FilamentSKU.objects.filter(active=True, avg_cost_per_g__lte=0).exists(),

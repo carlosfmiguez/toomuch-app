@@ -60,6 +60,17 @@
           {% include "catalog/_collections_field.html" with form=data_form %}
           {% include "catalog/_field.html" with f=data_form.short_description span=2 %}
         </div>
+        {% if dim_rows %}
+        <div class="tm-dims" data-dims>
+          <span class="material-symbols-outlined">straighten</span>
+          <div class="tm-dims__body">
+            <strong>{% if dims_prefilled %}Medidas preenchidas a partir do 3MF — confira e salve.{% else %}Medidas lidas dos arquivos 3D{% endif %}</strong>
+            <span class="tm-small tm-muted">altura × largura × profundidade{% if not dim_best %} · com várias partes, a medida do produto montado não sai do arquivo: use como referência{% endif %}</span>
+            <ul>{% for d in dim_rows %}<li><span>{{ d.label }}</span> <strong>{{ d.text }}</strong>
+              <button type="button" class="tm-btn tm-btn--ghost tm-btn--sm" data-use-dims data-h="{{ d.height }}" data-w="{{ d.width }}" data-d="{{ d.depth }}">Usar</button></li>{% endfor %}</ul>
+          </div>
+        </div>
+        {% endif %}
         <div class="tm-formgrid tm-formgrid--4">
           {% include "catalog/_field.html" with f=data_form.height_mm %}
           {% include "catalog/_field.html" with f=data_form.width_mm %}
@@ -85,6 +96,13 @@
       </form>
       <script>
       (function () {
+        document.querySelectorAll("[data-use-dims]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            [["id_height_mm", b.dataset.h], ["id_width_mm", b.dataset.w], ["id_depth_mm", b.dataset.d]].forEach(function (x) {
+              var el = document.getElementById(x[0]); if (el) { el.value = x[1]; el.classList.add("tm-flash"); }
+            });
+          });
+        });
         var origin = document.getElementById("id_origin"), box = document.querySelector("[data-license]");
         if (!origin || !box) return;
         function sync() { box.hidden = origin.value === "own"; }

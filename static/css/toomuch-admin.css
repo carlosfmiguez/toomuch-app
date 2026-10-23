@@ -621,3 +621,13 @@ html.dark .tm-tag { color: var(--color-primary-300); }
 html.dark .tm-choice__body { border-color: var(--color-base-700); }
 .tm-plates-ask { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px; }
 .tm-plates-ask span:nth-child(2) { flex: 1 1 260px; }
+
+/* --- medidas sugeridas pelo 3MF --- */
+.tm-dims { display: flex; gap: 10px; padding: 12px 14px; border-radius: 10px; background: color-mix(in oklab, var(--color-primary-500) 8%, transparent); border: 1px solid color-mix(in oklab, var(--color-primary-500) 25%, transparent); font-size: 13px; }
+.tm-dims > .material-symbols-outlined { color: var(--color-primary-600); }
+.tm-dims__body { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.tm-dims ul { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; }
+.tm-dims li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tm-dims li > span { min-width: 140px; color: var(--tm-ink-soft); }
+.tm-flash { animation: tm-flash 1s ease; }
+@keyframes tm-flash { from { background: color-mix(in oklab, var(--color-primary-500) 25%, transparent); } }

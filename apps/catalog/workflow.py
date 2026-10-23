@@ -48,7 +48,10 @@ def steps_for(product: Product) -> list[Step]:
     if not product.short_description:
         todo.append("Escreva a descrição curta (vai para o catálogo e a loja).")
     if not (product.height_mm and product.width_mm):
-        todo.append("Informe as medidas.")
+        from .dims import suggestions
+
+        best = suggestions(product)[1]
+        todo.append(f"Informe as medidas (o 3MF sugere {best.text})." if best else "Informe as medidas.")
     if not product.license_is_valid:
         todo.append("Licença de venda inválida ou vencida.")
     s1 = Step("dados", 1, "Dados do produto", done=product.license_is_valid and bool(product.short_description), todo=todo, anchor="dados")
@@ -293,7 +296,7 @@ def apply_plates(part: Part, mode: str, labels: list[str] | None = None, filamen
             sib = Part.objects.create(
                 product=product, name=f"{base} {label}"[:80], default_qty=part.default_qty, color_slot=part.color_slot,
                 waste_pct_override=part.waste_pct_override, failure_pct_override=part.failure_pct_override,
-                plate_index=int(pl["index"]) if pl["sliced"] else None, only_sizes=label,
+                plate_index=int(pl["index"]), only_sizes=label,
             )
             if pl["sliced"]:
                 copy_asset(sib, mode_meta)
