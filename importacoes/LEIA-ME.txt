@@ -1,0 +1,2 @@
+# Pacotes de importação levados ao servidor pelo deploy (pasta /app/importacoes/...).
+# Use em Produtos → Importar em lote → "pasta já no servidor". Pode apagar depois de importar.
