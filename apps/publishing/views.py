@@ -32,7 +32,21 @@ def catalog_index(request):
         "doc": doc, "channels": Channel.objects.filter(status=Channel.Status.ACTIVE), "channel": channel,
         "only_ready": _only_ready(request),
         "products_total": Product.objects.filter(status__in=[Product.Status.ACTIVE, Product.Status.SEASONAL]).count(),
+        "public_url": _public_catalog_url(request, channel),
+        "ready_count": len(catalog_service.build_catalog(channel, only_ready=True).pages) if not _only_ready(request) else len(doc.pages),
     })
+
+
+def _public_catalog_url(request, channel) -> str:
+    from urllib.parse import quote
+
+    from django.urls import reverse
+
+    url = request.build_absolute_uri(reverse("public:catalog"))
+    site = Channel.objects.filter(kind=Channel.Kind.SITE, status=Channel.Status.ACTIVE).first()
+    if channel and (site is None or channel.pk != site.pk):
+        url += f"?canal={channel.pk}"
+    return url
 
 
 @login_required

@@ -6,6 +6,7 @@ app_name = "public"
 
 urlpatterns = [
     path("", views_public.home, name="home"),
+    path("catalogo/", views_public.catalog, name="catalog"),
     path("c/<str:code>/", views_public.category, name="category"),
     path("p/<str:sku_base>/", views_public.product, name="product"),
     path("colecao/<slug:slug>/", views_public.collection, name="collection"),

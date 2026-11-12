@@ -3,6 +3,17 @@
 <head>
 <meta charset="utf-8">
 <title>{{ doc.title }} · Toomuch</title>
+{% if public %}
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="{{ public.description }}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Toomuch">
+<meta property="og:title" content="{{ doc.title }} · Toomuch">
+<meta property="og:description" content="{{ public.description }}">
+<meta property="og:url" content="{{ public.url }}">
+{% if public.image %}<meta property="og:image" content="{{ public.image }}">{% endif %}
+<meta name="theme-color" content="#4A2E1E">
+{% endif %}
 <style>
   @font-face { font-family: "Fraunces"; src: url("{% static 'fonts/Fraunces-Variable.ttf' %}") format("truetype"); font-weight: 100 900; }
   @font-face { font-family: "Manrope"; src: url("{% static 'fonts/Manrope-Variable.ttf' %}") format("truetype"); font-weight: 200 800; }
@@ -55,6 +66,14 @@
   .quote { left: 104.8mm; top: 147mm; width: 90.5mm; margin: 0; font-family: Fraunces, serif; font-variation-settings: "SOFT" 100, "opsz" 24; font-weight: 500; font-size: 16.5pt; line-height: 1.35; }
   .why { left: 104.8mm; top: 197mm; width: 90.5mm; font-size: 9.75pt; line-height: 1.55; }
 </style>
+{% if public %}<style>
+  .pub-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; gap: 10px; justify-content: center; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: rgba(243,238,230,.94); backdrop-filter: blur(6px); border-top: 1px solid #D9C7A6; }
+  .pub-bar a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 999px; font: 600 15px Manrope, sans-serif; text-decoration: none; }
+  .pub-bar .wa { background: #4A2E1E; color: #F3EEE6; }
+  .pub-bar .store { color: #4A2E1E; border: 1px solid #C9B99B; }
+  body { padding-bottom: 76px; }
+  .pub-empty { max-width: 520px; margin: 18vh auto; padding: 0 16px; text-align: center; font: 16px/1.6 Manrope, sans-serif; color: #4A2E1E; }
+</style>{% endif %}
 </head>
 <body>
 
@@ -133,5 +152,27 @@
   <div class="abs footer"><span>toomuch.art · @toomuchbr.art</span>{% include "publishing/_infinity.svg" %}<span>Design autoral · produzido em Florianópolis, SC</span></div>
 </section>
 {% endfor %}
+{% if public %}
+{% if not doc.pages %}<div class="pub-empty">O catálogo está sendo atualizado. Fale com a gente pelo WhatsApp para ver as peças disponíveis.</div>{% endif %}
+<nav class="pub-bar">
+  {% if public.whatsapp %}<a class="wa" href="{{ public.whatsapp }}" target="_blank" rel="noopener">Fazer pedido pelo WhatsApp</a>{% endif %}
+  <a class="store" href="{{ public.store }}">Ver a loja</a>
+</nav>
+<script>
+  // a página é A4 (210 mm): no celular, reduz para caber na largura da tela, sem rolagem lateral
+  (function () {
+    function fit() {
+      var pages = document.querySelectorAll(".page");
+      pages.forEach(function (p) {
+        p.style.zoom = 1;
+        var w = p.offsetWidth, avail = document.documentElement.clientWidth - 16;
+        p.style.zoom = w > avail ? (avail / w) : 1;
+      });
+    }
+    window.addEventListener("resize", fit);
+    fit();
+  })();
+</script>
+{% endif %}
 </body>
 </html>

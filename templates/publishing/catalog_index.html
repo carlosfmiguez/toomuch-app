@@ -13,6 +13,24 @@
     </div>
   </div>
 
+  <section class="tm-card tm-share">
+    <div class="tm-card__head"><span class="material-symbols-outlined">share</span><div><h2 class="tm-card__title">Link público do catálogo</h2>
+      <p class="tm-card__sub">Abre sem login, no celular, com os {{ ready_count }} produto{{ ready_count|pluralize }} pronto{{ ready_count|pluralize }} e os preços de {{ channel.name|default:"Site" }}. Atualiza sozinho quando um produto fica pronto.</p></div></div>
+    <div class="tm-card__body tm-row tm-share__row">
+      <input class="tm-input tm-share__url" value="{{ public_url }}" readonly data-public-url onclick="this.select()">
+      <button class="tm-btn tm-btn--secondary" type="button" data-copy><span class="material-symbols-outlined">content_copy</span><span data-copy-label>Copiar</span></button>
+      <a class="tm-btn tm-btn--primary" href="https://wa.me/?text={{ "Conheça o catálogo da Toomuch: "|urlencode }}{{ public_url|urlencode }}" target="_blank" rel="noopener"><span class="material-symbols-outlined">send</span>Enviar pelo WhatsApp</a>
+      <a class="tm-btn tm-btn--ghost" href="{{ public_url }}" target="_blank" rel="noopener"><span class="material-symbols-outlined">open_in_new</span>Abrir</a>
+    </div>
+  </section>
+  <script>
+    document.querySelector("[data-copy]").addEventListener("click", function () {
+      var input = document.querySelector("[data-public-url]"), label = document.querySelector("[data-copy-label]");
+      (navigator.clipboard ? navigator.clipboard.writeText(input.value) : Promise.reject()).catch(function () { input.select(); document.execCommand("copy"); })
+        .finally(function () { label.textContent = "Copiado"; setTimeout(function () { label.textContent = "Copiar"; }, 2000); });
+    });
+  </script>
+
   <form method="get" class="tm-form tm-form--inline">
     <label class="tm-field">Canal (lista de preço)<select name="canal">{% for c in channels %}<option value="{{ c.pk }}" {% if channel and c.pk == channel.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></label>
     <label class="tm-field">Produtos<select name="todos"><option value="0" {% if only_ready %}selected{% endif %}>só os prontos</option><option value="1" {% if not only_ready %}selected{% endif %}>todos os ativos</option></select></label>

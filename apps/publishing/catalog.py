@@ -129,8 +129,11 @@ def build_catalog(channel: Channel | None, only_ready: bool = True, year: int | 
     )
 
 
-def render_catalog_html(doc: CatalogDocument, for_pdf: bool = True, only_products: bool = False) -> str:
-    return render_to_string("publishing/catalog_pdf.html", {"doc": doc, "for_pdf": for_pdf, "only_products": only_products})
+def render_catalog_html(doc: CatalogDocument, for_pdf: bool = True, only_products: bool = False, public: dict | None = None) -> str:
+    """`public`: versão aberta para compartilhar (cabe na tela do celular, prévia no WhatsApp, botão de pedido)."""
+    return render_to_string("publishing/catalog_pdf.html", {
+        "doc": doc, "for_pdf": for_pdf, "only_products": only_products, "public": public,
+    })
 
 
 def _local_file(url: str):

@@ -631,3 +631,8 @@ html.dark .tm-choice__body { border-color: var(--color-base-700); }
 .tm-dims li > span { min-width: 140px; color: var(--tm-ink-soft); }
 .tm-flash { animation: tm-flash 1s ease; }
 @keyframes tm-flash { from { background: color-mix(in oklab, var(--color-primary-500) 25%, transparent); } }
+
+/* --- link público do catálogo --- */
+.tm-share { margin-bottom: 16px; }
+.tm-share__row { flex-wrap: wrap; gap: 8px; }
+.tm-share__url { flex: 1 1 320px; min-width: 0; font-family: ui-monospace, monospace; font-size: 13px; }

@@ -148,3 +148,35 @@ def product(request, sku_base):
         "collections": cols, "related_title": related_title,
         "ml_url": f"https://www.mercadolivre.com.br/{ml.external_id}" if ml else "",
     })
+
+
+def catalog(request):
+    """
+    Catálogo em HTML aberto (sem login) para mandar o link pelo WhatsApp: só produtos prontos, com o
+    preço do canal Site (ou de outro canal ativo em ?canal=<id>). Nunca mostra custo nem rascunho.
+    """
+    from django.http import HttpResponse
+    from django.urls import reverse
+
+    from . import catalog as catalog_service
+
+    channel = None
+    if request.GET.get("canal", "").isdigit():
+        channel = Channel.objects.filter(pk=request.GET["canal"], status=Channel.Status.ACTIVE).first()
+    channel = channel or _site_channel()
+    doc = catalog_service.build_catalog(channel, only_ready=True)
+    image = ""
+    if doc.cover is not None:
+        img = doc.cover.thumbnail or doc.cover.file
+        if img:
+            image = request.build_absolute_uri(img.url)
+    names = ", ".join(p.product.name for p in doc.pages[:4])
+    public = {
+        "url": request.build_absolute_uri(),
+        "image": image,
+        "description": (f"{len(doc.pages)} peças impressas em 3D com acabamento refinado: {names}"
+                        + ("…" if len(doc.pages) > 4 else ".")) if doc.pages else "Objetos de decoração e utilidades impressos em 3D.",
+        "whatsapp": whatsapp_link("Olá! Vi o catálogo da Toomuch e quero fazer um pedido."),
+        "store": request.build_absolute_uri(reverse("public:home")),
+    }
+    return HttpResponse(catalog_service.render_catalog_html(doc, for_pdf=False, public=public))

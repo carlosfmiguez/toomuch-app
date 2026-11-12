@@ -147,3 +147,35 @@ class PublicCatalogTests(TestCase):
         self.assertContains(resp, "Branco")
         self.assertContains(resp, "118,90")
         self.assertNotContains(resp, "admin/")
+
+
+class PublicCatalogTests(TestCase):
+    """Catálogo HTML aberto: sem login, só produtos prontos, cabe no celular e tem prévia para o WhatsApp."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from django.core.management import call_command
+
+        call_command("seed_demo", verbosity=0)
+        cls.user = get_user_model().objects.create_superuser("carlos", "c@example.com", "senha-forte-123")
+
+    def test_public_catalog(self):
+        from django.urls import reverse
+
+        r = self.client.get(reverse("public:catalog"))
+        self.assertEqual(r.status_code, 200)  # sem login
+        html = r.content.decode()
+        self.assertIn('name="viewport"', html)
+        self.assertIn('property="og:title"', html)
+        self.assertIn("Ver a loja", html)
+        self.assertNotIn("custo", html.lower().replace("custom", ""))
+        # rascunho / incompleto não aparece
+        from apps.catalog.models import Product
+        draft = Product.objects.exclude(status__in=["active", "seasonal"]).first()
+        if draft:
+            self.assertNotIn(draft.name, html)
+        # tela interna mostra o link e o botão do WhatsApp
+        self.client.force_login(self.user)
+        page = self.client.get(reverse("publishing:catalog_index"))
+        self.assertContains(page, "/loja/catalogo/")
+        self.assertContains(page, "https://wa.me/?text=")
