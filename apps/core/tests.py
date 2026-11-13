@@ -125,3 +125,22 @@ class BadRequestHandlerTests(TestCase):
         self.assertIn("SuspiciousFileOperation: caminho fora da pasta", resp.content.decode())
         req.user = get_user_model()(username="b", is_staff=False)
         self.assertNotIn("caminho", bad_request(req, SuspiciousFileOperation("caminho")).content.decode())
+
+
+class CsrfFailureTests(TestCase):
+    def test_friendly_page_with_reason_for_staff(self):
+        from django.contrib.auth import get_user_model
+        from django.test import Client
+
+        user = get_user_model().objects.create_superuser("csrf", "c@example.com", "senha-forte-123")
+        c = Client(enforce_csrf_checks=True)
+        c.force_login(user)
+        resp = c.post("/produtos/novo/", {"name": "x"})
+        self.assertEqual(resp.status_code, 403)
+        body = resp.content.decode()
+        self.assertIn("Envio bloqueado por segurança", body)
+        self.assertIn("Motivo técnico", body)
+        c.logout()
+        resp = Client(enforce_csrf_checks=True).post("/admin/login/", {"username": "a"})
+        self.assertEqual(resp.status_code, 403)
+        self.assertNotIn("Motivo técnico", resp.content.decode())

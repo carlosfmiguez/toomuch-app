@@ -36,6 +36,11 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
+# Domínios próprios aceitos para envio de formulários (valem só se também estiverem em ALLOWED_HOSTS).
+for _origin in ["https://app.toomuch.art", "https://toomuch.art", "https://www.toomuch.art", "https://toomuch-app.onrender.com"]:
+    if _origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_origin)
+CSRF_FAILURE_VIEW = "apps.core.views.csrf_failure"
 
 # Domínios que a hospedagem injeta sozinha (Railway: RAILWAY_PUBLIC_DOMAIN; Render: RENDER_EXTERNAL_HOSTNAME; Fly: FLY_APP_NAME)
 for _host in filter(None, [
