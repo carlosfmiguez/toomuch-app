@@ -59,13 +59,23 @@ def parse_asset(asset: Asset) -> Asset:
 def _make_photo_thumbnail(asset: Asset) -> None:
     from PIL import Image, ImageOps
 
-    img = Image.open(asset.file)
-    img = ImageOps.exif_transpose(img).convert("RGB")
-    w, h = img.size
-    asset.meta = {**asset.meta, "width": w, "height": h, "ratio": round(w / h, 3) if h else None}
+    # O servidor tem 512 MB: uma foto de celular (12–50 MP) aberta inteira ocupa 150–600 MB e
+    # derruba o processo (502). O JPEG é decodificado já reduzido (draft) e a imagem é liberada logo.
+    with Image.open(asset.file) as src:
+        w, h = src.size
+        orientation = src.getexif().get(0x0112, 1) if hasattr(src, "getexif") else 1
+        if orientation in (5, 6, 7, 8):
+            w, h = h, w
+        asset.meta = {**asset.meta, "width": w, "height": h, "ratio": round(w / h, 3) if h else None}
+        if src.format == "JPEG":
+            src.draft("RGB", (PHOTO_THUMB_PX * 2, PHOTO_THUMB_PX * 2))
+        src.thumbnail((PHOTO_THUMB_PX * 2, PHOTO_THUMB_PX * 2), reducing_gap=2.0)
+        img = ImageOps.exif_transpose(src)
+        img = img.convert("RGB")
     img.thumbnail((PHOTO_THUMB_PX, PHOTO_THUMB_PX))
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=85, optimize=True)
+    del img
     asset.thumbnail.save(f"{asset.pk or 'novo'}-thumb.jpg", ContentFile(buf.getvalue()), save=False)
 
 
