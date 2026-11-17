@@ -27,4 +27,12 @@ if settings.STORAGES["default"]["BACKEND"].endswith("FileSystemStorage"):
 
     from django.urls import re_path
 
-    urlpatterns += [re_path(r"^media/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT})]
+    def serve_media(request, path):
+        # Nomes de upload não se repetem (o storage acrescenta sufixo), então o navegador pode guardar por
+        # 30 dias: sem isso, cada lista com 200 miniaturas ocupava todos os workers do servidor.
+        response = serve(request, path, document_root=settings.MEDIA_ROOT)
+        if response.status_code in (200, 304):
+            response["Cache-Control"] = "public, max-age=2592000"
+        return response
+
+    urlpatterns += [re_path(r"^media/(?P<path>.*)$", serve_media)]
