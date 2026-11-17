@@ -471,6 +471,18 @@ class Asset(models.Model):
         verbose_name_plural = "arquivos"
         ordering = ["-created_at"]
 
+    @property
+    def view_url(self) -> str:
+        """Miniatura se existir, senão o arquivo original; vazio se nenhum (nunca levanta erro no template)."""
+        for f in (self.thumbnail, self.file):
+            if f:
+                try:
+                    return f.url
+                except ValueError:
+                    continue
+        return ""
+
+
     def __str__(self) -> str:
         return self.name or (self.file.name if self.file else f"arquivo #{self.pk}")
 

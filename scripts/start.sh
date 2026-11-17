@@ -13,6 +13,9 @@ python manage.py seed_base
 echo "[start] custos e preços sugeridos em dia"
 python manage.py recalcular_custos
 
+echo "[start] miniaturas de fotos que ficaram faltando"
+python manage.py refazer_miniaturas || true
+
 echo "[start] usuário admin (se DJANGO_SUPERUSER_* estiver definido)"
 python manage.py ensure_superuser
 

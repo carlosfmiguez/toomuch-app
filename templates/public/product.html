@@ -27,7 +27,7 @@
     <div class="hero-wrap" style="flex:1 1 400px;min-width:0;max-width:600px;display:flex;flex-direction:column;gap:14px">
       {% if photos %}
       <button type="button" class="hero-btn{% if page.product.category.code != 'LUM' %} lit{% endif %}" id="hero" aria-label="{% if page.product.category.code == 'LUM' %}Acender ou apagar a luminária{% else %}Ampliar a foto{% endif %}">
-        <img id="hero-img" src="{{ photos.0.thumbnail.url|default:photos.0.file.url }}" alt="{{ page.product.name }}">
+        <img id="hero-img" src="{{ photos.0.view_url }}" alt="{{ page.product.name }}">
       </button>
       {% if page.product.category.code == 'LUM' %}
       <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px">
@@ -36,7 +36,7 @@
       </div>
       {% endif %}
       {% if photos|length > 1 %}
-      <div class="thumbs">{% for a in photos %}<img src="{{ a.thumbnail.url|default:a.file.url }}" alt="" data-src="{{ a.thumbnail.url|default:a.file.url }}" class="{% if forloop.first %}on{% endif %}">{% endfor %}</div>
+      <div class="thumbs">{% for a in photos %}<img src="{{ a.view_url }}" alt="" data-src="{{ a.view_url }}" class="{% if forloop.first %}on{% endif %}">{% endfor %}</div>
       {% endif %}
       {% else %}<div class="hero-btn" style="display:flex;align-items:center;justify-content:center;color:var(--choc2)">Foto em breve</div>{% endif %}
     </div>

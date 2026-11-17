@@ -153,3 +153,28 @@ class CollectionTests(TestCase):
         self.assertFalse(report.errors, report.errors)
         p = Product.objects.get(sku_base="TM-VAS-OND")
         self.assertEqual(sorted(c.name for c in p.collections.all()), ["Linha Onda", "Natal 2026"])
+
+
+@override_settings(MEDIA_ROOT=TMP)
+class PhotoWithoutThumbnailTests(TestCase):
+    """Foto cuja miniatura não foi gerada (servidor caiu no envio) não pode derrubar a página pública."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_demo", verbosity=0)
+        cls.user = get_user_model().objects.create_superuser("carlos", "c@example.com", "senha-forte-123")
+
+    def test_public_page_and_repair_command(self):
+        sol = Product.objects.get(sku_base="TM-LUM-SOL")
+        variant = Variant.objects.get(sku="TM-LUM-SOL-G-BRC")
+        photo = Asset.objects.create(product=sol, kind=Asset.Kind.PHOTO, is_main=True,
+                                     file=SimpleUploadedFile("s.jpg", jpeg_bytes(), content_type="image/jpeg"))
+        Asset.objects.filter(pk=photo.pk).update(thumbnail="")
+        for row in latest_prices(variant):
+            approve_price(row, self.user, price=row.suggested_price)
+        cache.clear()
+        resp = self.client.get(reverse("public:product", args=["TM-LUM-SOL"]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, Asset.objects.get(pk=photo.pk).file.url)
+        call_command("refazer_miniaturas", verbosity=0)
+        self.assertTrue(Asset.objects.get(pk=photo.pk).thumbnail)
