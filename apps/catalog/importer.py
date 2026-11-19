@@ -89,6 +89,13 @@ def slugify_ascii(text: str) -> str:
     return re.sub(r"[^A-Za-z0-9]+", " ", text).strip()
 
 
+def model_key(path: Path) -> str:
+    """Nome da peça de um arquivo 3D: ``vaso.3mf`` e ``vaso.gcode.3mf`` (projeto e fatiado) são a mesma peça."""
+    stem = path.name[: -len(path.suffix)] if path.suffix else path.name
+    stem = re.sub(r"\.gcode$", "", stem, flags=re.I)
+    return humanize(stem)
+
+
 def humanize(name: str) -> str:
     name = re.sub(r"[_\-]+", " ", name)
     name = re.sub(r"\s+", " ", name).strip()
@@ -377,7 +384,8 @@ def _import_one(sp: ScannedProduct, row: dict, root: Path, user, default_categor
             kind, production = Asset.Kind.THREEMF_SLICED, True  # já tem gramas e tempo: vira arquivo de produção
         part = None
         if kind in (Asset.Kind.STL, Asset.Kind.THREEMF_PROJECT, Asset.Kind.THREEMF_SLICED, Asset.Kind.STEP, Asset.Kind.F3D):
-            part_name = humanize(path.stem) if len(sp.models) > 1 else "Peça única"
+            keys = {model_key(m) for m in sp.models}
+            part_name = model_key(path) if len(keys) > 1 else "Peça única"
             part, _ = Part.objects.get_or_create(product=product, name=part_name[:80])
         asset = Asset(product=product, part=part, kind=kind, uploaded_by=user, name=path.name, is_production=production,
                       is_main=(kind == Asset.Kind.PHOTO and not product.assets.filter(kind=Asset.Kind.PHOTO).exists()))

@@ -178,3 +178,26 @@ class PhotoWithoutThumbnailTests(TestCase):
         self.assertContains(resp, Asset.objects.get(pk=photo.pk).file.url)
         call_command("refazer_miniaturas", verbosity=0)
         self.assertTrue(Asset.objects.get(pk=photo.pk).thumbnail)
+
+
+@override_settings(MEDIA_ROOT=TMP)
+class ProjectAndSlicedSamePartTests(TestCase):
+    """Projeto (.3mf) e fatiado (.gcode.3mf) do mesmo modelo viram UMA peça, não duas (o custo dobraria)."""
+
+    def test_same_part(self):
+        call_command("seed_demo", verbosity=0)
+        user = get_user_model().objects.create_superuser("carlos", "c@example.com", "senha-forte-123")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "Rena").mkdir()
+            (root / "Rena" / "rena.3mf").write_bytes(make_3mf(with_slice_info=False))
+            (root / "Rena" / "rena.gcode.3mf").write_bytes(make_3mf())
+            (root / "Arvore").mkdir()
+            (root / "Arvore" / "Arvore G.gcode.3mf").write_bytes(make_3mf())
+            (root / "Arvore" / "Arvore M.gcode.3mf").write_bytes(make_3mf(with_gcode=True))
+            importer.apply(root, user=user)
+        rena = Product.objects.get(name="Rena")
+        self.assertEqual(list(rena.parts.values_list("name", flat=True)), ["Peça única"])
+        self.assertEqual(rena.assets.exclude(part=None).count(), 2)
+        arv = Product.objects.get(name="Arvore")
+        self.assertEqual(sorted(arv.parts.values_list("name", flat=True)), ["Arvore G", "Arvore M"])
