@@ -116,11 +116,29 @@ class PartFileForm(forms.Form):
 
 
 class VariantCreateForm(forms.Form):
-    size = forms.CharField(label="tamanho", initial="Único", max_length=20)
+    base = forms.ModelChoiceField(
+        label="mesmas peças e componentes de", queryset=Variant.objects.none(), required=False,
+        empty_label="— nenhuma: usar as peças do produto —",
+        help_text="Variante de cor: o fatiado é o mesmo, muda só a cor e o filamento.",
+    )
+    size = forms.CharField(label="tamanho", initial="Único", max_length=20, required=False)
     primary_color = forms.ModelChoiceField(label="cor principal", queryset=Color.objects.all(), required=False, empty_label="—")
     main_filament = filament_field("filamento da cor principal", required=True)
     secondary_color = forms.ModelChoiceField(label="cor secundária", queryset=Color.objects.all(), required=False, empty_label="—")
     secondary_filament = filament_field("filamento da cor secundária")
+
+    def __init__(self, *args, product=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if product is not None:
+            self.fields["base"].queryset = product.variants.select_related("primary_color").order_by("-is_default", "created_at")
+            self.fields["base"].label_from_instance = lambda v: (
+                f"{v.sku} · {v.size}" + (f" · {v.primary_color.name}" if v.primary_color else ""))
+
+    def clean(self):
+        data = super().clean()
+        base = data.get("base")
+        data["size"] = (data.get("size") or "").strip() or (base.size if base else "Único")
+        return data
 
 
 class VariantForm(forms.ModelForm):

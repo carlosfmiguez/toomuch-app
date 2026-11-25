@@ -201,3 +201,72 @@ class ProjectAndSlicedSamePartTests(TestCase):
         self.assertEqual(rena.assets.exclude(part=None).count(), 2)
         arv = Product.objects.get(name="Arvore")
         self.assertEqual(sorted(arv.parts.values_list("name", flat=True)), ["Arvore G", "Arvore M"])
+
+
+@override_settings(MEDIA_ROOT=TMP)
+class ColorVariantAndWeightTests(TestCase):
+    """Variante de cor reaproveita a peça (mesmo fatiado); peso sai do fatiado para a ficha."""
+
+    @classmethod
+    def setUpTestData(cls):
+        call_command("seed_demo", verbosity=0)
+        cls.user = get_user_model().objects.create_superuser("carlos", "c@example.com", "senha-forte-123")
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
+    def test_color_variant_copies_parts_and_components(self):
+        from .models import BOMItem, Color, Component, Part
+
+        base = Variant.objects.get(sku="TM-LUM-SOL-G-BRC")
+        prod = base.product
+        comp = Component.objects.create(name="Led Vela", unit_cost=3)
+        BOMItem.objects.create(variant=base, kind=BOMItem.Kind.COMPONENT, component=comp, quantity=1)
+        Part.objects.filter(product=prod).update(only_sizes="G")  # peça limitada ao tamanho G
+        base.minutes_assembly = 7
+        base.save()
+        color = Color.objects.exclude(pk=base.primary_color_id).first()
+        resp = self.client.post(reverse("catalog:variant_add", args=[prod.pk]), {
+            "base": base.pk, "size": "", "primary_color": color.pk, "main_filament": base.main_filament_id})
+        self.assertEqual(resp.status_code, 302)
+        new = prod.variants.exclude(pk__in=Variant.objects.filter(product=prod, created_at__lte=base.created_at)).latest("created_at")
+        self.assertEqual(new.size, base.size)
+        self.assertEqual(
+            sorted(new.bom_items.filter(kind="part").values_list("part_id", flat=True)),
+            sorted(base.bom_items.filter(kind="part").values_list("part_id", flat=True)))
+        self.assertTrue(new.bom_items.filter(component=comp).exists())
+        self.assertEqual(new.minutes_assembly, 7)
+        self.assertGreater(new.cost_cached, 0)
+
+        # outra cor num tamanho novo: a peça passa a valer também nele e não some
+        resp = self.client.post(reverse("catalog:variant_add", args=[prod.pk]), {
+            "base": base.pk, "size": "P", "primary_color": color.pk, "main_filament": base.main_filament_id})
+        p_var = prod.variants.get(size="P")
+        self.assertTrue(p_var.bom_items.filter(kind="part").exists())
+        from .workflow import sync_bom_with_parts
+        sync_bom_with_parts(prod)
+        self.assertTrue(p_var.bom_items.filter(kind="part").exists())
+
+    def test_add_part_in_variant_editor(self):
+        from .models import BOMItem
+
+        v = Variant.objects.get(sku="TM-LUM-SOL-G-BRC")
+        item = v.bom_items.filter(kind="part").first()
+        self.client.post(reverse("catalog:variant_edit", args=[v.pk]), {"action": f"remove_part:{item.pk}"})
+        self.assertFalse(v.bom_items.filter(part=item.part).exists())
+        page = self.client.get(reverse("catalog:variant_edit", args=[v.pk]))
+        self.assertContains(page, "Adicionar peça")
+        self.client.post(reverse("catalog:variant_edit", args=[v.pk]), {"action": "add_part", "part": item.part_id})
+        self.assertTrue(BOMItem.objects.filter(variant=v, part=item.part).exists())
+
+    def test_weight_from_sliced_file(self):
+        from . import dims
+
+        prod = Product.objects.get(sku_base="TM-LUM-SOL")
+        rows, best = dims.weights(prod)
+        self.assertTrue(rows)
+        self.assertGreater(best, 0)
+        Product.objects.filter(pk=prod.pk).update(weight_g=None)
+        page = self.client.get(reverse("catalog:product_detail", args=[prod.pk]) + "?etapa=dados")
+        self.assertContains(page, "data-use-weight")
+        self.assertContains(page, f'value="{best}"')

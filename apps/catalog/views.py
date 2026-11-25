@@ -161,7 +161,9 @@ def product_detail(request, pk):
         })
 
     last = product.variants.order_by("-created_at").first()
-    vform = VariantCreateForm(initial={
+    default_variant = product.variants.order_by("-is_default", "created_at").first()
+    vform = VariantCreateForm(product=product, initial={
+        "base": default_variant.pk if default_variant else None,
         "size": "Único" if not variants else "",
         "main_filament": last.main_filament_id if last else None,
         "secondary_filament": last.secondary_filament_id if last else None,
@@ -176,23 +178,29 @@ def product_detail(request, pk):
         key = nxt.key if nxt else "publicar"
     i = keys.index(key)
     current = steps[i]
-    data_form = dim_rows = dim_best = None
-    prefilled = []
+    data_form = dim_rows = dim_best = weight_best = None
+    weight_rows, prefilled = [], []
     if key == "dados":
         from . import dims
 
         dim_rows, dim_best = dims.suggestions(product, compute=True)
+        weight_rows, weight_best = dims.weights(product)
         data_form = ProductDataForm(instance=product)
+        fill = []
         if dim_best:  # campos vazios já vêm com a medida do 3MF, para conferir e salvar
-            for field, value in (("height_mm", dim_best.height), ("width_mm", dim_best.width), ("depth_mm", dim_best.depth)):
-                if not getattr(product, field) and value:
-                    data_form.initial[field] = value
-                    prefilled.append(field)
+            fill += [("height_mm", dim_best.height), ("width_mm", dim_best.width), ("depth_mm", dim_best.depth)]
+        if weight_best:  # e o peso, somado dos fatiados
+            fill.append(("weight_g", weight_best))
+        for field, value in fill:
+            if not getattr(product, field) and value:
+                data_form.initial[field] = value
+                prefilled.append(field)
     return render(request, "catalog/product_detail.html", {
         **shell(request, product.name),
         "product": product, "steps": steps, "next": nxt, "step": current,
         "prev_step": steps[i - 1] if i > 0 else None, "next_in_order": steps[i + 1] if i + 1 < len(steps) else None,
         "data_form": data_form, "dim_rows": dim_rows, "dim_best": dim_best, "dims_prefilled": prefilled,
+        "weight_rows": weight_rows, "weight_best": weight_best,
         "parts": parts, "has_secondary": has_secondary, "library_parts": library_parts, "library_files": library_files, "new_part_form": PartForm(prefix="new"),
         "file_form": PartFileForm(), "variants": variants, "variant_form": vform, "photos": photos,
         "no_cost_filaments": FilamentSKU.objects.filter(active=True, avg_cost_per_g__lte=0).exists(),
@@ -462,19 +470,24 @@ def asset_delete(request, pk):
 @require_POST
 def variant_add(request, pk):
     product = get_object_or_404(Product, pk=pk)
-    form = VariantCreateForm(request.POST)
+    form = VariantCreateForm(request.POST, product=product)
     if not form.is_valid():
         _form_errors(request, form)
         return redirect(_ficha(pk, "variantes"))
     d = form.cleaned_data
-    variant = Variant.objects.create(
-        product=product, sku=workflow.suggest_variant_sku(product, d["size"], d["primary_color"]), size=d["size"],
-        primary_color=d["primary_color"], secondary_color=d["secondary_color"],
-        main_filament=d["main_filament"], secondary_filament=d["secondary_filament"],
-        is_default=not product.variants.exists(),
-    )
+    base = d.get("base")
+    with transaction.atomic():
+        variant = Variant.objects.create(
+            product=product, sku=workflow.suggest_variant_sku(product, d["size"], d["primary_color"]), size=d["size"],
+            primary_color=d["primary_color"], secondary_color=d["secondary_color"],
+            main_filament=d["main_filament"], secondary_filament=d["secondary_filament"],
+            is_default=not product.variants.exists(),
+        )
+        if base is not None:
+            workflow.copy_composition(base, variant)
     workflow.refresh_variant(variant)
-    messages.success(request, f"Variante {variant.sku} criada com custo R$ {variant.cost_cached}. Confira e aprove o preço.")
+    how = f" com as mesmas peças de {base.sku}" if base is not None else ""
+    messages.success(request, f"Variante {variant.sku} criada{how}, custo R$ {variant.cost_cached}. Confira e aprove o preço.")
     return redirect(_ficha(pk, "variantes", f"v{variant.pk}"))
 
 
@@ -494,6 +507,21 @@ def variant_edit(request, pk):
                 messages.success(request, "Componente adicionado e custo recalculado.")
                 return redirect("catalog:variant_edit", pk=pk)
             form = VariantForm(instance=variant)
+        elif action == "add_part":
+            want = str(request.POST.get("part") or "")
+            part = next((p for p in product.all_parts() if str(p.pk) == want), None)
+            if part is None:
+                messages.error(request, "Escolha uma peça.")
+                return redirect("catalog:variant_edit", pk=pk)
+            workflow.add_part_to_variant(variant, part)
+            workflow.refresh_variant(variant)
+            messages.success(request, f"Peça {part.name} adicionada à composição e custo recalculado.")
+            return redirect("catalog:variant_edit", pk=pk)
+        elif action.startswith("remove_part:"):
+            BOMItem.objects.filter(variant=variant, pk=action.split(":", 1)[1], kind=BOMItem.Kind.PART).delete()
+            workflow.refresh_variant(variant)
+            messages.success(request, "Peça tirada desta variante.")
+            return redirect("catalog:variant_edit", pk=pk)
         elif action.startswith("remove_item:"):
             BOMItem.objects.filter(variant=variant, pk=action.split(":", 1)[1], kind=BOMItem.Kind.COMPONENT).delete()
             workflow.refresh_variant(variant)
@@ -517,7 +545,9 @@ def variant_edit(request, pk):
     return render(request, "catalog/variant_edit.html", {
         **shell(request, f"Variante {variant.sku}"),
         "variant": variant, "product": product, "form": form, "comp_form": comp_form,
-        "parts": variant.bom_items.filter(kind=BOMItem.Kind.PART).select_related("part"),
+        "parts": variant.bom_items.filter(kind=BOMItem.Kind.PART).select_related("part", "part__product"),
+        "addable_parts": [p for p in product.all_parts()
+                          if p.pk not in set(variant.bom_items.filter(kind=BOMItem.Kind.PART).values_list("part_id", flat=True))],
         "components": variant.bom_items.filter(kind=BOMItem.Kind.COMPONENT).select_related("component"),
         "has_secondary": product.parts.filter(color_slot=Part.ColorSlot.SECONDARY).exists(),
     })

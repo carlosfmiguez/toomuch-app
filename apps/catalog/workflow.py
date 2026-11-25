@@ -335,3 +335,41 @@ def apply_plates(part: Part, mode: str, labels: list[str] | None = None, filamen
         sync_bom_with_parts(product)
         refresh_product(product)
     return log
+
+
+def copy_composition(source: Variant, target: Variant) -> None:
+    """
+    Nova variante de cor: mesmas peças (o mesmo fatiado), mesmas quantidades, componentes e tempos de
+    acabamento da variante de origem. Só a cor e o filamento mudam. Peça limitada a tamanhos passa a valer
+    também para o tamanho da nova variante, para a composição não sumir na próxima sincronização.
+    """
+    from .models import BOMItem
+
+    target.bom_items.all().delete()
+    for item in source.bom_items.select_related("part"):
+        BOMItem.objects.create(variant=target, kind=item.kind, part=item.part, component=item.component,
+                               quantity=item.quantity, color_slot=item.color_slot)
+        if item.part is not None:
+            _allow_size(item.part, target)
+    target.minutes_post = source.minutes_post
+    target.minutes_assembly = source.minutes_assembly
+    target.minutes_packaging = source.minutes_packaging
+    target.save(update_fields=["minutes_post", "minutes_assembly", "minutes_packaging"])
+
+
+def add_part_to_variant(variant: Variant, part) -> None:
+    from .models import BOMItem
+
+    if not variant.bom_items.filter(kind=BOMItem.Kind.PART, part=part).exists():
+        BOMItem.objects.create(variant=variant, kind=BOMItem.Kind.PART, part=part, quantity=part.default_qty)
+    _allow_size(part, variant)
+
+
+def _allow_size(part, variant: Variant) -> None:
+    if part.product_id != variant.product_id:
+        return  # peça compartilhada de outro produto: não mexe na regra de tamanho de lá
+    sizes = part.size_list()
+    key = (variant.size or "").strip().upper()
+    if sizes and key and key not in sizes:
+        part.only_sizes = ", ".join(sizes + [key])
+        part.save(update_fields=["only_sizes"])

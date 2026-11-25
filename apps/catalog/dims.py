@@ -146,3 +146,52 @@ def suggestions(product: Product, compute: bool = False) -> tuple[list[Dims], Di
     if all(p.only_sizes for p in parts) and len(rows) == len(parts) and len({p.only_sizes.upper() for p in parts}) == len(parts):
         return rows, max(rows, key=lambda d: d.height)
     return rows, None
+
+
+def part_grams(part: Part):
+    """Gramas de uma unidade da peça: do 3MF fatiado (placa dela, se tiver) ou da estimativa."""
+    from decimal import Decimal
+
+    asset = part.production_asset()
+    if asset is not None:
+        grams, _ = part.print_numbers(asset)
+        if grams:
+            return Decimal(grams)
+    return Decimal(part.est_grams or 0)
+
+
+def weights(product: Product) -> tuple[list[tuple[str, int]], int | None]:
+    """
+    Peso de plástico do produto pelos fatiados: [(rótulo, gramas)] por tamanho e o sugerido para a ficha
+    (o da variante padrão; sem variante, o do maior tamanho). Componentes comprados não entram.
+    """
+    from decimal import Decimal
+
+    from .models import BOMItem
+
+    parts = list(product.all_parts())
+    if not parts:
+        return [], None
+    grams = {p.pk: part_grams(p) for p in parts}
+    by_size: dict[str, Decimal] = {}
+    variants = list(product.variants.order_by("-is_default", "created_at"))
+    for v in variants:
+        key = (v.size or "Único").strip() or "Único"
+        if key in by_size:
+            continue
+        total = sum((grams.get(i.part_id, Decimal(0)) * i.quantity
+                     for i in v.bom_items.filter(kind=BOMItem.Kind.PART)), Decimal(0))
+        if total:
+            by_size[key] = total
+    if not by_size:
+        sizes = sorted({s for p in parts for s in p.size_list()})
+        for size in sizes or ["Único"]:
+            total = sum((grams[p.pk] * p.default_qty for p in parts if not p.size_list() or size in p.size_list()), Decimal(0))
+            if total:
+                by_size[size] = total
+    rows = [(k, int(round(v))) for k, v in by_size.items()]
+    if not rows:
+        return [], None
+    if variants and rows[0][0] == ((variants[0].size or "Único").strip() or "Único"):
+        return rows, rows[0][1]
+    return rows, max(g for _, g in rows)

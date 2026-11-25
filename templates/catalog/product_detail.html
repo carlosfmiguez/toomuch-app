@@ -60,14 +60,17 @@
           {% include "catalog/_collections_field.html" with form=data_form %}
           {% include "catalog/_field.html" with f=data_form.short_description span=2 %}
         </div>
-        {% if dim_rows %}
+        {% if dim_rows or weight_rows %}
         <div class="tm-dims" data-dims>
           <span class="material-symbols-outlined">straighten</span>
           <div class="tm-dims__body">
-            <strong>{% if dims_prefilled %}Medidas preenchidas a partir do 3MF — confira e salve.{% else %}Medidas lidas dos arquivos 3D{% endif %}</strong>
+            <strong>{% if dims_prefilled %}Medidas e peso preenchidos a partir do 3MF — confira e salve.{% else %}Medidas lidas dos arquivos 3D{% endif %}</strong>
             <span class="tm-small tm-muted">altura × largura × profundidade{% if not dim_best %} · com várias partes, a medida do produto montado não sai do arquivo: use como referência{% endif %}</span>
             <ul>{% for d in dim_rows %}<li><span>{{ d.label }}</span> <strong>{{ d.text }}</strong>
-              <button type="button" class="tm-btn tm-btn--ghost tm-btn--sm" data-use-dims data-h="{{ d.height }}" data-w="{{ d.width }}" data-d="{{ d.depth }}">Usar</button></li>{% endfor %}</ul>
+              <button type="button" class="tm-btn tm-btn--ghost tm-btn--sm" data-use-dims data-h="{{ d.height }}" data-w="{{ d.width }}" data-d="{{ d.depth }}">Usar</button></li>{% endfor %}
+              {% for label, g in weight_rows %}<li><span>Peso{% if weight_rows|length > 1 %} · {{ label }}{% endif %}</span> <strong>{{ g }} g</strong>
+              <button type="button" class="tm-btn tm-btn--ghost tm-btn--sm" data-use-weight data-g="{{ g }}">Usar</button></li>{% endfor %}</ul>
+            {% if weight_rows %}<span class="tm-small tm-muted">Peso do plástico somado dos 3MF fatiados (sem componentes nem embalagem).</span>{% endif %}
           </div>
         </div>
         {% endif %}
@@ -96,6 +99,11 @@
       </form>
       <script>
       (function () {
+        document.querySelectorAll("[data-use-weight]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var el = document.getElementById("id_weight_g"); if (el) { el.value = b.dataset.g; el.classList.add("tm-flash"); }
+          });
+        });
         document.querySelectorAll("[data-use-dims]").forEach(function (b) {
           b.addEventListener("click", function () {
             [["id_height_mm", b.dataset.h], ["id_width_mm", b.dataset.w], ["id_depth_mm", b.dataset.d]].forEach(function (x) {
@@ -305,10 +313,11 @@
         </article>
         {% endfor %}
         <details class="tm-card tm-newvariant"{% if not variants %} open{% endif %}>
-          <summary class="tm-card__head"><span class="material-symbols-outlined">add_circle</span><div><h3 class="tm-card__title">{% if variants %}Adicionar outra variante (tamanho ou cor){% else %}Criar a primeira variante{% endif %}</h3><p class="tm-card__sub">O SKU é gerado sozinho (SKU-base + tamanho + cor) e a composição entra com as peças do produto.</p></div><span class="material-symbols-outlined tm-newvariant__chev">expand_more</span></summary>
+          <summary class="tm-card__head"><span class="material-symbols-outlined">add_circle</span><div><h3 class="tm-card__title">{% if variants %}Adicionar outra variante (tamanho ou cor){% else %}Criar a primeira variante{% endif %}</h3><p class="tm-card__sub">O SKU é gerado sozinho (SKU-base + tamanho + cor). Para outra cor, escolha a variante de origem: as mesmas peças, componentes e tempos entram no custo, só muda o filamento.</p></div><span class="material-symbols-outlined tm-newvariant__chev">expand_more</span></summary>
           <form class="tm-card__body" method="post" action="{% url 'catalog:variant_add' product.pk %}">{% csrf_token %}
             <div class="tm-formgrid">
-              <label class="tm-field">Tamanho (Único, P, M, G…){{ variant_form.size }}</label>
+              {% if variants %}<label class="tm-field tm-span-2">Mesmas peças e componentes de (variante de cor: o fatiado é o mesmo){{ variant_form.base }}</label>{% endif %}
+              <label class="tm-field">Tamanho (Único, P, M, G…){% if variants %} — vazio = o da variante escolhida{% endif %}{{ variant_form.size }}</label>
               <label class="tm-field">Cor principal{{ variant_form.primary_color }}</label>
               <label class="tm-field tm-span-2">Filamento da cor principal{{ variant_form.main_filament }}</label>
               {% if has_secondary %}

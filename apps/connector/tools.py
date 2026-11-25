@@ -168,10 +168,12 @@ def _variant_info(v: Variant) -> dict:
 
 
 def _dims_info(p: Product) -> dict:
-    from apps.catalog.dims import suggestions
+    from apps.catalog.dims import suggestions, weights
 
     rows, best = suggestions(p, compute=True)
-    return {"por_peca": [d.as_dict() for d in rows], "sugerida": best.as_dict() if best else None}
+    wrows, wbest = weights(p)
+    return {"por_peca": [d.as_dict() for d in rows], "sugerida": best.as_dict() if best else None,
+            "peso_g_por_tamanho": dict(wrows), "peso_g_sugerido": wbest}
 
 
 def _product_info(p: Product, base: str, full: bool = True) -> dict:
@@ -656,15 +658,25 @@ def definir_placas(user, base, produto, peca_id, modo, tamanhos=None, filamento_
     "produto": S, "tamanho": {**S, "description": "Único, P, M, G..."},
     "cor_principal": {**S, "description": "código ou nome da cor"}, "filamento_principal": {**S, "description": "id ou busca (marca material cor)"},
     "cor_secundaria": S, "filamento_secundario": S,
+    "copiar_de": {**S, "description": "SKU de uma variante do produto: copia peças (mesmo fatiado), componentes e tempos. Use para variante de cor."},
 }, ["produto", "filamento_principal"])
-def criar_variante(user, base, produto, filamento_principal, tamanho="Único", cor_principal="", cor_secundaria="", filamento_secundario=""):
+def criar_variante(user, base, produto, filamento_principal, tamanho="", cor_principal="", cor_secundaria="",
+                   filamento_secundario="", copiar_de=""):
     p = _product(produto)
     color = _color(cor_principal)
+    source = None
+    if copiar_de:
+        source = _variant(copiar_de)
+        if source.product_id != p.pk:
+            raise ToolError(f"{copiar_de} é de outro produto.")
+    tamanho = (tamanho or "").strip() or (source.size if source else "Único")
     v = Variant.objects.create(
         product=p, sku=workflow.suggest_variant_sku(p, tamanho, color), size=tamanho, primary_color=color,
         secondary_color=_color(cor_secundaria), main_filament=_filament(filamento_principal),
         secondary_filament=_filament(filamento_secundario), is_default=not p.variants.exists(),
     )
+    if source is not None:
+        workflow.copy_composition(source, v)
     workflow.refresh_variant(v)
     return _variant_info(v)
 

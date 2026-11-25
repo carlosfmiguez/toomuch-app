@@ -26,14 +26,23 @@
     </section>
 
     <section class="tm-card">
-      <div class="tm-card__head"><span class="material-symbols-outlined">view_in_ar</span><div><h2 class="tm-card__title">Peças impressas nesta variante</h2><p class="tm-card__sub">Vêm do produto; mude a quantidade se esta variante usa mais ou menos</p></div></div>
+      <div class="tm-card__head"><span class="material-symbols-outlined">view_in_ar</span><div><h2 class="tm-card__title">Peças impressas nesta variante</h2><p class="tm-card__sub">O mesmo 3MF fatiado serve para todas as cores: aqui muda só a quantidade. O filamento (cor) vem dos campos acima.</p></div></div>
       <div class="tm-card__body tm-card__body--flush">
         <table class="tm-table">
-          <thead><tr><th>Peça</th><th>Cor</th><th class="r" style="width:120px">Quantidade</th></tr></thead>
-          <tbody>{% for b in parts %}<tr><td>{{ b.part.name }}</td><td class="tm-muted">{{ b.part.get_color_slot_display }}</td><td class="r"><input class="tm-input tm-input--num" type="text" inputmode="decimal" name="qty_{{ b.pk }}" value="{{ b.quantity|floatformat:'-2' }}"></td></tr>
-          {% empty %}<tr><td colspan="3" class="tm-muted">O produto ainda não tem peças.</td></tr>{% endfor %}</tbody>
+          <thead><tr><th>Peça</th><th>Cor</th><th class="r" style="width:120px">Quantidade</th><th style="width:60px"></th></tr></thead>
+          <tbody>{% for b in parts %}<tr><td>{{ b.part.name }}{% if b.part.product_id != product.pk %} <span class="tm-muted tm-small">· de {{ b.part.product.name }}</span>{% endif %}</td><td class="tm-muted">{{ b.part.get_color_slot_display }}</td><td class="r"><input class="tm-input tm-input--num" type="text" inputmode="decimal" name="qty_{{ b.pk }}" value="{{ b.quantity|floatformat:'-2' }}"></td>
+            <td class="r"><button class="tm-btn tm-btn--ghost tm-btn--sm tm-btn--icon" name="action" value="remove_part:{{ b.pk }}" title="Tirar desta variante" formnovalidate><span class="material-symbols-outlined">delete</span></button></td></tr>
+          {% empty %}<tr><td colspan="4" class="tm-muted">Nenhuma peça nesta variante{% if addable_parts %}: adicione abaixo a peça (o mesmo fatiado) para compor o custo{% else %}. Cadastre a peça e o 3MF na etapa Peças{% endif %}.</td></tr>{% endfor %}</tbody>
         </table>
       </div>
+      {% if addable_parts %}
+      <div class="tm-card__foot tm-addrow tm-addrow--foot">
+        <label class="tm-field tm-field--grow">Usar a peça (mesmo arquivo fatiado)
+          <select class="tm-input" name="part">{% for p in addable_parts %}<option value="{{ p.pk }}">{{ p.name }}{% if p.only_sizes %} · tamanho {{ p.only_sizes }}{% endif %}{% if p.product_id != product.pk %} · de {{ p.product.name }}{% endif %}</option>{% endfor %}</select>
+        </label>
+        <button class="tm-btn tm-btn--secondary" name="action" value="add_part" type="submit" formnovalidate><span class="material-symbols-outlined">add</span>Adicionar peça</button>
+      </div>
+      {% endif %}
     </section>
 
     <section class="tm-card">
